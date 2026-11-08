@@ -1,0 +1,63 @@
+# Linux runs the full gate (`make check`, the offscreen render tests on
+# Mesa's software GL, and every example built). Windows and macOS build and
+# test everything; offscreen tests there run on whatever GPU adapter the
+# runner offers and skip, saying why, when it offers none.
+#
+# The toolchain comes from rust-toolchain.toml: `rustup toolchain install`
+# with no name installs the pinned version and its components (rustup 1.28
+# and later no longer install it on `rustup show`).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    name: Linux (check, render tests, examples)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Mesa, a virtual display, and fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            xvfb xauth libegl1 libegl-mesa0 libgl1-mesa-dri mesa-vulkan-drivers \
+            libxkbcommon-x11-0 fonts-dejavu-core
+      - name: Format, lint, dependencies, and layers
+        run: make check
+      - name: Tests, rendering on Mesa's software GL
+        run: make test-render
+      - name: Build the examples
+        run: cargo build --examples --all-features
+
+  desktop:
+    name: ${{ matrix.os }} (build and test)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Build everything
+        run: cargo build --all-targets --all-features
+      - name: Test
+        run: cargo test --all-features

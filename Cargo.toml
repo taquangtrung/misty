@@ -1,0 +1,149 @@
+[package]
+name = "misty"
+description = "A GPU-rendered, keyboard-first GUI framework for Rust desktop apps: window runtime, chrome, widgets, and themes."
+version = "0.0.1"
+edition = "2024"
+authors = ["Quang Trung Ta <taquangtrungvn@gmail.com>"]
+license = "MIT"
+# The verified floor: `rust-toolchain.toml` pins 1.100.0.
+rust-version = "1.100"
+keywords = ["gui", "wgpu", "desktop", "widgets", "keyboard"]
+categories = ["gui"]
+include = ["CHANGELOG.md", "Cargo.toml", "LICENSE", "README.md", "examples/**/*.rs", "src/**/*.rs", "src/**/*.wgsl", "tests/**/*.rs"]
+repository = "https://github.com/taquangtrung/misty"
+
+# docs.rs documents every optional feature's API.
+[package.metadata.docs.rs]
+all-features = true
+
+[lints.rust]
+missing_docs = "deny"
+# Denied, not forbidden: a renderer may need a narrow, commented exception.
+unsafe_code = "deny"
+
+[lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+
+[features]
+# `misty::FileDialog`: the system's dialogs to open files, pick a folder,
+# or choose where to save.
+dialogs = ["dep:rfd"]
+# `misty::GlobalHotkeys`: keys that reach the app while another app has
+# the focus (the desktop portal on Wayland).
+global-hotkey = ["dep:global-hotkey"]
+# `misty::Highlighter`: syntax highlight spans for a `CodeView` from the
+# bundled Sublime syntaxes (syntect, pure Rust). Adds about 2 MB to the
+# binary and a few tens of milliseconds to load the syntaxes once.
+highlight = ["dep:syntect"]
+# `Document::from_html`: a safe subset of HTML (dictionary entries) into a
+# `Document` for `RichText`.
+html = ["dep:html5gum"]
+# `misty::IconTheme`: file-type and named icons from the freedesktop icon
+# theme (Linux and the BSDs): the current theme, its inherited themes, and
+# hicolor, SVG and PNG.
+icon-theme = ["dep:mime_guess"]
+# Theme files in KDL: `Theme::from_kdl` and `Theme::with_kdl`.
+kdl = ["dep:kdl"]
+# `Document::from_markdown`: CommonMark (with tables, strikethrough, and
+# task lists) into a `Document` for `RichText`.
+markdown = ["dep:pulldown-cmark"]
+# `misty::Notification`: desktop notifications, with their clicks and
+# actions answered as app messages where the system reports them.
+notify = ["dep:notify-rust"]
+# Serde for what pickers remember (`History`, `Recency`), so an app saves
+# them with its own state.
+serde = ["dep:serde"]
+# `misty::SingleInstance`: a second launch hands its arguments to the
+# running app and exits.
+single-instance = ["dep:interprocess"]
+# `misty::testing`: a headless window to feed widgets inputs and read
+# back what they asked for and drew, for an app's own tests.
+testing = []
+# `misty::Tray`: an icon in the system tray with a menu, answering as app
+# messages.
+tray = ["dep:ksni", "dep:tray-icon"]
+
+[dependencies]
+# The accessibility tree screen readers read; accesskit_winit 0.34 is the
+# adapter for winit 0.30, on accesskit 0.25.
+accesskit = "0.25"
+accesskit_winit = "0.34"
+# Text only (no image support), with the Wayland data-control protocol
+# besides X11.
+arboard = { version = "3", default-features = false, features = ["wayland-data-control"] }
+# Keys that reach the app from anywhere on the desktop, behind misty's
+# `global-hotkey` feature: X11, Windows, and macOS (Wayland goes through
+# the desktop portal over zbus instead).
+global-hotkey = { version = "0.10", optional = true }
+glyphon = "0.12"
+# HTML into a misty `Document`, behind misty's `html` feature: the WHATWG
+# tokenizer only, lenient as browsers are, without html5ever's tree
+# builder; misty keeps its own stack of the few tags it reads.
+html5gum = { version = "0.8", optional = true }
+# Decoding only the formats an app ships icons and pictures in, or a
+# reader shows: GIF and WebP (animated too), BMP, and TIFF besides PNG and
+# JPEG.
+image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "tiff", "webp"] }
+# File extensions to MIME types, behind misty's `icon-theme` feature, to
+# name a file's icon; no content sniffing.
+mime_guess = { version = "2", default-features = false, optional = true }
+# Only the parser: theme files are read node by node, not through serde.
+kdl = { version = "6", default-features = false, optional = true }
+# What misty reports and an app routes where it wants: a GPU fallback, text
+# or a picture not drawn, a callback that panicked.
+log = "0.4"
+# CPU tessellation of vector paths (`Frame::fill_path`, `Frame::stroke_path`)
+# into triangles; std only, no serialization.
+lyon_tessellation = "1"
+# Desktop notifications, behind misty's `notify` feature: the freedesktop
+# D-Bus API over zbus (async-io) on Linux, the system's own elsewhere.
+# Held below 4.19, which moves to zbus 6 and would build a second zbus.
+notify-rust = { version = "~4.18", default-features = false, features = ["z"], optional = true }
+pollster = "0.4"
+# Markdown into a misty `Document`, behind misty's `markdown` feature:
+# CommonMark with tables, strikethrough, and task lists; no HTML output.
+pulldown-cmark = { version = "0.13", default-features = false, optional = true }
+# The `/regular expression/` words of a picker's query.
+regex = "1"
+# The system's file dialogs, behind misty's `dialogs` feature: the desktop
+# portal on Linux (driven by pollster, no async runtime), with Wayland
+# parenting.
+rfd = { version = "0.18", optional = true }
+# SVG icons: shapes only, no text, fonts, or embedded raster images.
+resvg = { version = "0.48", default-features = false }
+# What pickers remember, serialized behind misty's `serde` feature.
+serde = { version = "1", features = ["derive"], optional = true }
+# Syntax highlighting behind misty's `highlight` feature: the bundled
+# Sublime syntaxes, parsed with fancy-regex (pure Rust, no oniguruma C
+# library); no themes, HTML output, or YAML loading.
+syntect = { version = "5", default-features = false, features = ["default-syntaxes", "parsing", "regex-fancy"], optional = true }
+# Flexbox layout of dialogs and panels; no grid, block, or float layout.
+taffy = { version = "0.15", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size"] }
+thiserror = "2"
+# Visual order of right-to-left runs on the cell grid; std and its own
+# character data only.
+unicode-bidi = { version = "0.3", default-features = false, features = ["std", "hardcoded-data"] }
+unicode-width = "0.2"
+wgpu = "30"
+winit = "0.30"
+
+[target.'cfg(all(unix, not(any(target_os = "macos", target_os = "ios", target_os = "android"))))'.dependencies]
+# The tray icon on Linux and the BSDs, behind misty's `tray` feature: the
+# StatusNotifierItem protocol over D-Bus, on the async-io zbus misty already
+# uses, with no GTK main loop.
+ksni = { version = "0.3", default-features = false, features = ["async-io", "blocking"], optional = true }
+# The desktop portal's appearance settings on Linux and the BSDs, over the
+# same zbus (and its async-io executor) accesskit already brings; the
+# blocking API only adds code, no crates.
+zbus = { version = "5", default-features = false, features = ["async-io", "blocking-api"] }
+
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+# The tray icon on Windows and macOS, behind misty's `tray` feature; its
+# Linux backend (GTK and libappindicator) is left off for ksni.
+tray-icon = { version = "0.24", default-features = false, optional = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+# Local sockets on Windows (named pipes), behind misty's `single-instance`
+# feature; Unix uses std's Unix domain sockets.
+interprocess = { version = "2", default-features = false, optional = true }
