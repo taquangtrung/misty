@@ -1,0 +1,5 @@
+# Pinned so every build uses the same compiler, formatter, and lints.
+# Bump deliberately, rerunning `make lint` after.
+[toolchain]
+channel = "1.100.0"
+components = ["rustfmt", "clippy"]
