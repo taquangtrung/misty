@@ -104,9 +104,9 @@ const INACTIVE_ACCENT_SHARE: f32 = 0.5;
 const GAP_MARKER: f32 = 2.0;
 
 /// How much of the background a filled tab ([`TabStyle::Filled`]) mixes
-/// into the strip's color, and how much under the pointer.
+/// into the strip's color. Under the pointer the theme's hover light goes
+/// over it, as over anything that can be pressed.
 const PILL_SHARE: f32 = 0.5;
-const PILL_HOVER_SHARE: f32 = 0.6;
 
 /// How much of the text color the line between two filled tabs mixes into
 /// the strip's color.
@@ -827,11 +827,10 @@ impl TabStrip {
                 (TabStyle::Flat, true) => frame.fill_rect(slot.body, theme.hover),
                 (TabStyle::Flat, false) => {}
                 (TabStyle::Filled, hovered) => {
-                    let share = match hovered {
-                        true => PILL_HOVER_SHARE,
-                        false => PILL_SHARE,
+                    let fill = match hovered {
+                        true => theme.hover,
+                        false => theme.surface.mix(theme.background, PILL_SHARE),
                     };
-                    let fill = theme.surface.mix(theme.background, share);
                     let scale_factor = frame.scale_factor();
                     let pill = theme.shape.highlight_band(slot.body, scale_factor);
                     frame.draw_box(pill, &theme.shape.highlight(fill, scale_factor));
@@ -1819,6 +1818,36 @@ mod tests {
         snapshot.assert_pixel(a.x + a.width / 2.0, a.y + 3.0, pill, "a quiet tab's pill");
         let line = theme.surface.mix(theme.foreground, SEPARATOR_SHARE);
         snapshot.assert_pixel(b.x, middle, line, "the line between a and b");
+    }
+
+    #[test]
+    fn test_a_filled_tab_under_the_pointer_takes_the_theme_s_hover_light() {
+        let theme = Theme::dark();
+        let (strip, [_, _, c]) = strip();
+        let mut strip = strip
+            .with_tab_style(TabStyle::Filled)
+            .with_tab_borders(false);
+        strip.activate(c);
+        let area = Rect::new(0.0, 0.0, 480.0, 80.0);
+        let drawn = offscreen::render(480, 80, |frame| {
+            strip.draw(frame, area, &theme);
+        });
+        if drawn.is_none() {
+            return;
+        }
+        let a = strip.layout.as_ref().expect("drawn").slots[0].body;
+        strip.pointer = Some(Point::new(a.x + a.width / 2.0, a.y + a.height / 2.0));
+        let Some(snapshot) = offscreen::render(480, 80, |frame| {
+            strip.draw(frame, area, &theme);
+        }) else {
+            return;
+        };
+        snapshot.assert_pixel(
+            a.x + a.width / 2.0,
+            a.y + 3.0,
+            theme.hover,
+            "the hovered pill",
+        );
     }
 
     #[test]

@@ -1951,6 +1951,9 @@ impl Store {
             return;
         }
         let is_control = matches!(&node.kind, FlatKind::Control(control) if control.is_focusable());
+        if (extras.on_press.is_some() || extras.on_pointer_press.is_some()) && !is_control {
+            frame.note_pressable(rect, || access_name(flat, index), !extras.surface.unlit);
+        }
         match extras.on_press.is_some() && !is_control {
             true => {
                 self.focus.register(region, rect);
@@ -2471,11 +2474,14 @@ fn draw_surface<A>(
     theme: &Theme,
 ) {
     let surface = extras.surface;
-    let fill = match hovered {
-        true => surface.hover_background.or(surface.background),
-        false => surface.background,
+    let (fill, border) = match hovered {
+        true => (
+            extras.hover_fill().or(surface.background),
+            surface.hover_border.or(surface.border),
+        ),
+        false => (surface.background, surface.border),
     };
-    if fill.is_none() && surface.border.is_none() {
+    if fill.is_none() && border.is_none() {
         return;
     }
     let scale = frame.scale_factor();
@@ -2487,7 +2493,7 @@ fn draw_surface<A>(
     // A border asked for shows even in a theme whose boxes have none.
     let width = theme.shape.border(scale).max((scale as f32).round());
     let style = BoxStyle {
-        border: surface.border.map(|token| Border {
+        border: border.map(|token| Border {
             color: theme.color(token).into(),
             width,
         }),

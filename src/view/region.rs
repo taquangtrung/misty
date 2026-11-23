@@ -350,7 +350,7 @@ impl RegionBox {
         }
         self.hovered = over;
         answer.calls.extend(call(extras.on_hover.as_ref(), over));
-        if extras.surface.hover_background.is_some() {
+        if extras.lights_on_hover() {
             answer.used = true;
         }
     }
@@ -644,6 +644,66 @@ mod tests {
         window.send(&Input::PointerMoved(Point::new(390.0, 290.0)));
         assert_eq!(fill_of(&window), Some((surface, radius, true)));
         assert_eq!(window.app().hovers, [true, false]);
+    }
+
+    /// A pad that lights by default beside one that asked to stay unlit.
+    fn pads(_probe: &Probe) -> Element<'_, Probe> {
+        column([pad("Lit"), pad("Plain").unlit()])
+    }
+
+    #[test]
+    fn test_anything_pressable_lights_under_the_pointer_unless_it_asked_not_to() {
+        let mut window = window(pads);
+        let hover = Theme::dark().color(ThemeToken::Hover).into();
+        let lit_at = |window: &mut TreeWindow<Probe>, name: &str| {
+            let rect = bounds(window, Role::Button, name);
+            window.send(&Input::PointerMoved(Point::new(rect.x + 5.0, rect.y + 5.0)));
+            window
+                .frame()
+                .draw
+                .fills()
+                .iter()
+                .any(|quad| quad.rect == rect && quad.color == hover)
+        };
+        assert!(
+            lit_at(&mut window, "Lit"),
+            "the theme's hover light, asked for by no one"
+        );
+        assert!(!lit_at(&mut window, "Plain"), "it asked to stay unlit");
+        assert!(window.unlit_controls().is_empty(), "and that is no fault");
+    }
+
+    /// A selected row outlined under the pointer, as a tree's rows are.
+    fn outlined(_probe: &Probe) -> Element<'_, Probe> {
+        column([pad("Row")
+            .background(ThemeToken::SelectedRow)
+            .hover_border(ThemeToken::Border)])
+    }
+
+    #[test]
+    fn test_an_outlined_row_keeps_its_own_fill_under_the_pointer() {
+        let mut window = window(outlined);
+        let theme = Theme::dark();
+        let rect = bounds(&window, Role::Button, "Row");
+        let look = |window: &TreeWindow<Probe>| {
+            window
+                .frame()
+                .draw
+                .fills()
+                .iter()
+                .find(|quad| quad.rect == rect)
+                .map(|quad| (quad.color, quad.border.map(|border| border.color)))
+        };
+        let selected = theme.color(ThemeToken::SelectedRow).into();
+        assert_eq!(look(&window), Some((selected, None)));
+        window.send(&Input::PointerMoved(Point::new(rect.x + 5.0, rect.y + 5.0)));
+        let border = theme.color(ThemeToken::Border).into();
+        assert_eq!(
+            look(&window),
+            Some((selected, Some(border))),
+            "outlined, still selected"
+        );
+        assert!(window.unlit_controls().is_empty());
     }
 
     #[test]

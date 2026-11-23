@@ -455,6 +455,22 @@ impl<'a, A> Element<'a, A> {
         self
     }
 
+    /// A line around this element in the theme's `token` color while the
+    /// pointer is over it, in place of a hover fill, so its own fill (a
+    /// selected row's) still shows: the hover of a tree's rows.
+    pub fn hover_border(mut self, token: ThemeToken) -> Self {
+        self.extras().surface.hover_border = Some(token);
+        self
+    }
+
+    /// Keep this element unlit under the pointer, though it can be pressed:
+    /// for one that shows its own answer to the pointer, as a field its
+    /// caret. Anything else pressable takes the theme's hover light.
+    pub fn unlit(mut self) -> Self {
+        self.extras().surface.unlit = true;
+        self
+    }
+
     // --------------------------------------------------------------------
     // Pointer
     // --------------------------------------------------------------------

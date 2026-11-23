@@ -82,6 +82,12 @@ pub struct Frame {
     metrics: CellMetrics,
     /// What is drawn over the base layer.
     pub(crate) overlay: DrawList,
+    /// Every region drawn that takes a press, by its bounds and name, and
+    /// whether it lights under the pointer, for a test to point at each
+    /// ([`crate::testing::unlit_controls`]): some take only the pointer's
+    /// press, and so are no button to a screen reader.
+    #[cfg(any(test, feature = "testing"))]
+    pub(crate) pressables: Vec<(Rect, String, bool)>,
     /// Whether widgets cut their animations short.
     reduced_motion: bool,
     /// The family and size the cell grid's glyphs are drawn in beyond the
@@ -122,6 +128,8 @@ impl Frame {
             maximized: false,
             metrics,
             overlay: DrawList::default(),
+            #[cfg(any(test, feature = "testing"))]
+            pressables: Vec::new(),
             reduced_motion: false,
             run_style: RunStyle::default(),
             scale_factor,
@@ -167,6 +175,18 @@ impl Frame {
     pub fn access(&mut self, id: FocusId, rect: Rect, node: Node) {
         let rect = self.transform.bounds_of(rect);
         self.access.add(id, rect, node);
+    }
+
+    /// Notes a region drawn at `rect` that takes a press, called `name`,
+    /// lit under the pointer unless it asked not to be (`lit`), for a test
+    /// to point at; nothing outside tests.
+    #[cfg_attr(not(any(test, feature = "testing")), allow(unused_variables))]
+    pub(crate) fn note_pressable(&mut self, rect: Rect, name: impl FnOnce() -> String, lit: bool) {
+        #[cfg(any(test, feature = "testing"))]
+        {
+            let rect = self.transform.bounds_of(rect);
+            self.pressables.push((rect, name(), lit));
+        }
     }
 
     /// Describes `node` as [`Frame::access`] does and opens it: the nodes

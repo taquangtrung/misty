@@ -47,6 +47,9 @@ const SWITCH_WIDTH_SHARE: f32 = 1.8;
 /// pixels.
 const KNOB_INSET: f32 = 2.0;
 
+/// How much of the text color a switch's track takes under the pointer.
+const SWITCH_HOVER_SHARE: f32 = 0.25;
+
 /// The thickness of the check mark's strokes, in logical pixels.
 const CHECK_STROKE: f32 = 2.0;
 
@@ -277,12 +280,17 @@ impl Checkbox {
     }
 
     /// Draws the switch in `track`: the track in the accent when on, the
-    /// border color when off, the knob at the end it is switched to.
+    /// border color when off, lifted toward the text under the pointer, the
+    /// knob at the end it is switched to.
     fn draw_switch(&self, frame: &mut Frame, track: Rect, theme: &Theme) {
         let scale_factor = frame.scale_factor();
         let fill = match self.checked {
             true => self.mark_color(theme),
             false => theme.border,
+        };
+        let fill = match self.hovered {
+            true => fill.mix(theme.foreground, SWITCH_HOVER_SHARE),
+            false => fill,
         };
         frame.draw_box(track, &pill(fill, track.height));
         let inset = logical(KNOB_INSET, scale_factor);

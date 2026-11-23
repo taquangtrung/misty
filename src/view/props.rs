@@ -210,6 +210,12 @@ pub(crate) struct Surface {
     pub(crate) corners: Corners,
     /// The fill while the pointer is over it.
     pub(crate) hover_background: Option<ThemeToken>,
+    /// The line around it while the pointer is over it, in place of a
+    /// hover fill: the pointer outlines it and its own fill stays.
+    pub(crate) hover_border: Option<ThemeToken>,
+    /// Whether it stays unlit under the pointer though it can be pressed:
+    /// what shows its own answer to the pointer, as a field its caret.
+    pub(crate) unlit: bool,
 }
 
 /// What dragging an element carries.
@@ -314,6 +320,25 @@ impl<A> Extras<'_, A> {
             || self.drop.is_some()
             || self.file_drop.is_some()
             || self.surface.hover_background.is_some()
+            || self.surface.hover_border.is_some()
+    }
+
+    /// The fill the element takes while the pointer is over it: the one it
+    /// asked for, else the theme's hover light for anything it can press,
+    /// so every control answers the pointer alike (see
+    /// [`crate::testing::unlit_controls`]).
+    pub(crate) fn hover_fill(&self) -> Option<ThemeToken> {
+        let pressable = (self.on_press.is_some() || self.on_pointer_press.is_some())
+            && !self.surface.unlit
+            && self.surface.hover_border.is_none();
+        self.surface
+            .hover_background
+            .or(pressable.then_some(ThemeToken::Hover))
+    }
+
+    /// Whether anything about it changes under the pointer.
+    pub(crate) fn lights_on_hover(&self) -> bool {
+        self.hover_fill().is_some() || self.surface.hover_border.is_some()
     }
 }
 

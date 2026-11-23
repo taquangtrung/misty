@@ -457,6 +457,16 @@ impl<A: App> TreeWindow<A> {
         &self.frame
     }
 
+    /// The controls the window shows that the pointer does not light, for
+    /// a test to assert there are none: see [`super::unlit_controls`].
+    pub fn unlit_controls(&mut self) -> Vec<String> {
+        super::unlit_in(
+            self,
+            |window, input| window.send(input),
+            |window| super::Look::of(window.frame()),
+        )
+    }
+
     /// Whether the window the test looks at closed, or the app quit.
     pub fn is_closed(&self) -> bool {
         self.asks.exit || self.closed.contains(&self.window.id())

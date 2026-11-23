@@ -45,7 +45,7 @@ use super::app::offscreen;
 use super::app::widget::Widget;
 use super::app::window::{Size, WindowGeometry, WindowOptions};
 use super::base::cursor::CursorIcon;
-use super::base::geometry::Point;
+use super::base::geometry::{Point, Rect};
 use super::base::key::{Key, KeyCode, Mods, PhysicalKey, folded_shift_place};
 use super::input::event::{Input, InputReader};
 use super::platform::clipboard::SystemClipboard;
@@ -373,16 +373,111 @@ pub fn unnamed_controls(frame: &Frame) -> Vec<String> {
     let tree = access_tree(frame, "unnamed controls");
     tree.nodes
         .iter()
-        .filter(|(_, node)| {
-            node.supports_action(Action::Click)
-                || matches!(
-                    node.role(),
-                    Role::Button | Role::Link | Role::Tab | Role::MenuItem
-                )
-        })
+        .filter(|(_, node)| is_control(node))
         .filter(|(_, node)| node.label().is_none_or(|label| label.trim().is_empty()))
         .map(|(id, node)| format!("{:?} {}", node.role(), id.0))
         .collect()
+}
+
+/// The controls `draw` draws of `state` that the pointer does not light:
+/// each control [`unnamed_controls`] would look at, and each region that
+/// takes only the pointer's press, is hovered in turn,
+/// `input` handing the pointer's moves to `state`, and one whose frame stays
+/// as it was is named, by its label or else its role and number, for a test
+/// to assert there are none. `state` is whatever the test drives: a
+/// [`TestWindow`] and a widget, a page, an app's window. Every clickable part
+/// lights under the pointer (see [`Element::unlit`](crate::Element::unlit)
+/// for the exception).
+pub fn unlit_controls<S>(
+    state: &mut S,
+    input: impl FnMut(&mut S, &Input),
+    mut draw: impl FnMut(&mut S) -> Frame,
+) -> Vec<String> {
+    unlit_in(state, input, |state| Look::of(&draw(state)))
+}
+
+/// What a frame showed, kept to compare with another.
+pub(crate) struct Look {
+    /// What it painted, base layer and overlay, as written out.
+    paint: String,
+    /// What can be pressed, by name and the middle of where it was drawn:
+    /// the controls a screen reader is told of, and the regions that take
+    /// only the pointer's press.
+    targets: Vec<(String, Point)>,
+}
+
+impl Look {
+    /// What `frame` showed.
+    pub(crate) fn of(frame: &Frame) -> Self {
+        let tree = access_tree(frame, "unlit controls");
+        let middle_of =
+            |rect: &Rect| Point::new(rect.x + rect.width / 2.0, rect.y + rect.height / 2.0);
+        // What asked to stay unlit (a field) is no fault, however described.
+        let unlit: Vec<Point> = frame
+            .pressables
+            .iter()
+            .filter(|(_, _, lit)| !lit)
+            .map(|(rect, _, _)| middle_of(rect))
+            .collect();
+        let mut targets: Vec<(String, Point)> = tree
+            .nodes
+            .iter()
+            .filter(|(_, node)| is_control(node))
+            .filter_map(|(id, node)| {
+                let bounds = node.bounds()?;
+                let name = match node.label() {
+                    Some(label) if !label.trim().is_empty() => label.to_string(),
+                    _ => format!("{:?} {}", node.role(), id.0),
+                };
+                let middle = Point::new(
+                    ((bounds.x0 + bounds.x1) / 2.0) as f32,
+                    ((bounds.y0 + bounds.y1) / 2.0) as f32,
+                );
+                Some((name, middle))
+            })
+            .filter(|(_, middle)| !unlit.contains(middle))
+            .collect();
+        for (rect, name, lit) in &frame.pressables {
+            let middle = middle_of(rect);
+            if *lit && !targets.iter().any(|(_, known)| *known == middle) {
+                targets.push((name.clone(), middle));
+            }
+        }
+        Self {
+            paint: format!("{:?}{:?}", frame.draw, frame.overlay),
+            targets,
+        }
+    }
+}
+
+/// [`unlit_controls`] over what `look` sees of `state` each time.
+pub(crate) fn unlit_in<S>(
+    state: &mut S,
+    mut input: impl FnMut(&mut S, &Input),
+    mut look: impl FnMut(&mut S) -> Look,
+) -> Vec<String> {
+    let targets = look(state).targets;
+    let mut unlit = Vec::new();
+    for (name, middle) in targets {
+        input(state, &Input::PointerLeft);
+        let still = look(state).paint;
+        input(state, &Input::PointerMoved(middle));
+        if look(state).paint == still {
+            unlit.push(name);
+        }
+    }
+    input(state, &Input::PointerLeft);
+    unlit
+}
+
+/// Whether `node` is a control: one a press acts on, or a button, tab,
+/// link, or menu item.
+fn is_control(node: &Node) -> bool {
+    node.supports_action(Action::Click)
+        || matches!(
+            node.role(),
+            Role::Button | Role::Link | Role::Tab | Role::MenuItem
+        )
 }
 
 /// The id of the node `frame` describes as `label`, for a test to act on

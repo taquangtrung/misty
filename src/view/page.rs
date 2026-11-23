@@ -427,8 +427,11 @@ impl<'a, A: 'static> From<Item<'a, A>> for Element<'a, A> {
         match item.selected {
             // A quiet fill with a thin accent line, not a menu's bright band,
             // so muted text (a description) stays readable on it.
+            // Its hover is the shared light, since the cursor line it rests
+            // on is what the others take under the pointer.
             true => element
                 .background(ThemeToken::CursorLine)
+                .hover_background(ThemeToken::Hover)
                 .border(ThemeToken::Accent)
                 .corners(Corners::Control)
                 .keep_in_view(),
@@ -485,8 +488,12 @@ pub fn sidebar<'a, A: 'static, N: Into<Cow<'a, str>>>(
         .corners(Corners::Control)
         .hover_background(ThemeToken::CursorLine)
         .on_press(move |state: &mut A, _| on_choose(state, index));
+        // The entry shown rests on the cursor line the others take under the
+        // pointer, so its own hover is the shared light.
         match is_shown {
-            true => entry.background(ThemeToken::CursorLine),
+            true => entry
+                .background(ThemeToken::CursorLine)
+                .hover_background(ThemeToken::Hover),
             false => entry,
         }
     });
