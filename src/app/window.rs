@@ -62,6 +62,11 @@ use super::super::render::image::Image;
 // Constants
 // ========================================================================
 
+/// The radius a frameless window's corners are rounded by unless
+/// [`WindowOptions::with_rounded_corners`] or
+/// [`WindowOptions::with_square_corners`] says otherwise, in logical pixels.
+const DEFAULT_CORNER_RADIUS: u16 = 8;
+
 /// The size a window opens at unless [`WindowOptions::with_size`] says
 /// otherwise, in logical pixels.
 const DEFAULT_SIZE: Size = Size::new(960, 600);
@@ -277,7 +282,7 @@ impl WindowOptions {
             texture_budget: DEFAULT_BUDGET_BYTES,
             title: title.into(),
             transparent: false,
-            rounded_corners: None,
+            rounded_corners: Some(DEFAULT_CORNER_RADIUS),
         }
     }
 
@@ -400,10 +405,21 @@ impl WindowOptions {
     /// Windows 11 (which rounds by its own radius), and by `radius` logical
     /// pixels elsewhere. Windows 10 and a maximized window keep square
     /// corners. Only a [`Decorations::Frameless`] window is rounded; a
-    /// system frame rounds itself.
+    /// system frame rounds itself. A frameless window is rounded by 8
+    /// logical pixels unless this or [`WindowOptions::with_square_corners`]
+    /// says otherwise.
     pub fn with_rounded_corners(self, radius: u16) -> Self {
         Self {
             rounded_corners: Some(radius),
+            ..self
+        }
+    }
+
+    /// These options with a frameless window's corners left square, so
+    /// misty needs no transparency to cut them out.
+    pub fn with_square_corners(self) -> Self {
+        Self {
+            rounded_corners: None,
             ..self
         }
     }
@@ -764,6 +780,18 @@ mod tests {
         let plain = WindowOptions::new("t").window_attributes(&[]);
         assert_eq!(plain.window_level, WinitLevel::Normal);
         assert!(!plain.transparent);
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    #[test]
+    fn test_a_frameless_window_is_rounded_unless_asked_for_square_corners() {
+        let frameless = WindowOptions::new("t").with_decorations(Decorations::Frameless);
+        assert_eq!(frameless.drawn_corner_radius(), Some(DEFAULT_CORNER_RADIUS));
+        assert!(frameless.transparent(), "to cut the corners out");
+        let square = frameless.with_square_corners();
+        assert_eq!(square.drawn_corner_radius(), None);
+        assert!(!square.transparent());
+        assert_eq!(WindowOptions::new("t").drawn_corner_radius(), None);
     }
 
     #[test]
