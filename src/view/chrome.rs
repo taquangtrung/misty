@@ -77,6 +77,9 @@ pub struct TitleBar<'a, A> {
     app_buttons: Vec<(TitleBarButton, Callback<A, ()>)>,
     /// Where the window buttons go.
     buttons: WindowButtons,
+    /// The bar's height as a multiple of the cell height, or `None` for
+    /// the default.
+    height_ratio: Option<f32>,
     /// The menubar's titles, left to right.
     menus: &'a [&'a str],
     /// What the close button runs, or `None` to close the window.
@@ -220,6 +223,9 @@ pub(crate) struct TitleProps<'a> {
     app_buttons: Vec<TitleBarButton>,
     /// What the bar is built with.
     built: TitleBuild,
+    /// The bar's height as a multiple of the cell height, or `None` for
+    /// the default.
+    height_ratio: Option<f32>,
     /// The menubar title whose menu is open.
     open_menu: Option<usize>,
     /// The title.
@@ -403,6 +409,15 @@ impl<'a, A> TitleBar<'a, A> {
         self
     }
 
+    /// This bar `ratio` times the cell height tall (at least once), rather
+    /// than misty's default, for an app that keeps a bar of its own height.
+    pub fn height_ratio(self, ratio: f32) -> Self {
+        Self {
+            height_ratio: Some(ratio),
+            ..self
+        }
+    }
+
     /// What runs when the user clicks the close button, which otherwise
     /// closes the window: ask first, or keep the app running.
     pub fn on_close(self, apply: impl Fn(&mut A) + 'static) -> Self {
@@ -438,11 +453,13 @@ impl<A: 'static> Spec<A> for TitleBar<'_, A> {
 
     fn create(&self) -> TitleBox {
         let built = self.build();
+        let mut bar = built
+            .bar(self.title)
+            .with_app_buttons(self.app_button_faces());
+        bar.set_height_ratio(self.height_ratio);
         TitleBox {
             area: Rect::default(),
-            bar: built
-                .bar(self.title)
-                .with_app_buttons(self.app_button_faces()),
+            bar,
             built,
             focused: false,
             stop: 0,
@@ -454,6 +471,7 @@ impl<A: 'static> Spec<A> for TitleBar<'_, A> {
         TitleProps {
             app_buttons: self.app_button_faces(),
             built: self.build(),
+            height_ratio: self.height_ratio,
             open_menu: self.open_menu,
             title: self.title,
         }
@@ -624,6 +642,7 @@ impl Control for TitleBox {
             self.title = props.title.to_owned();
         }
         self.bar.set_app_buttons(props.app_buttons);
+        self.bar.set_height_ratio(props.height_ratio);
         if self.title != props.title {
             self.title = props.title.to_owned();
             self.bar.set_title(props.title);
@@ -631,8 +650,8 @@ impl Control for TitleBox {
         self.bar.set_open_menu(props.open_menu);
     }
 
-    fn measure(&self, _width: f32, metrics: CellMetrics, scale_factor: f64) -> f32 {
-        title_bar::TitleBar::height(metrics, scale_factor)
+    fn measure(&self, _width: f32, metrics: CellMetrics, _scale_factor: f64) -> f32 {
+        self.bar.bar_height(metrics)
     }
 
     /// The close button's click, and a menu asked for, opening under the
@@ -1442,6 +1461,7 @@ pub fn title_bar<'a, A>(title: &'a str) -> TitleBar<'a, A> {
     TitleBar {
         app_buttons: Vec::new(),
         buttons: WindowButtons::default(),
+        height_ratio: None,
         menus: &[],
         on_close: None,
         on_menu: None,
@@ -1717,6 +1737,20 @@ mod tests {
                 "menu by_key=true"
             ]
         );
+    }
+
+    #[test]
+    fn test_a_height_ratio_sets_how_far_down_the_content_starts() {
+        let content_y = |window: TreeWindow<Probe>| window.center(Role::Button, "Content").y;
+        let tall = window(|_| column([title_bar(TITLE).into(), button("Content").into()]));
+        let short = window(|_| {
+            column([
+                title_bar(TITLE).height_ratio(1.0).into(),
+                button("Content").into(),
+            ])
+        });
+        let cell = short.frame().cell_metrics().height;
+        assert_eq!(content_y(tall) - content_y(short), cell.round());
     }
 
     #[test]
