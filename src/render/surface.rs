@@ -184,8 +184,15 @@ mod tests {
 
     #[test]
     fn test_frames_skip_the_wait_for_the_display_where_the_driver_offers_it() {
-        let offered = [PresentMode::Fifo, PresentMode::Immediate, PresentMode::Mailbox];
-        assert_eq!(present_mode(&offered, PresentMode::Fifo), PresentMode::Mailbox);
+        let offered = [
+            PresentMode::Fifo,
+            PresentMode::Immediate,
+            PresentMode::Mailbox,
+        ];
+        assert_eq!(
+            present_mode(&offered, PresentMode::Fifo),
+            PresentMode::Mailbox
+        );
         assert_eq!(
             present_mode(&[PresentMode::Fifo], PresentMode::Fifo),
             PresentMode::Fifo,
