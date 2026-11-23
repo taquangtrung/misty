@@ -234,6 +234,12 @@ pub(crate) trait Spec<A> {
         true
     }
 
+    /// Whether the focus ring outlines the element while it has the
+    /// keyboard.
+    fn draws_focus_ring(&self) -> bool {
+        true
+    }
+
     /// Whether an element that does not take the keyboard still takes the
     /// pointer, as the toasts' cards do.
     fn takes_pointer(&self) -> bool {
@@ -301,6 +307,9 @@ pub(crate) trait Node<A> {
 
     /// Whether the element takes the keyboard.
     fn is_focusable(&self) -> bool;
+
+    /// Whether the focus ring outlines the element.
+    fn draws_focus_ring(&self) -> bool;
 
     /// Whether an element that does not take the keyboard takes the
     /// pointer.
@@ -406,6 +415,10 @@ impl<A, S: Spec<A>> Node<A> for S {
 
     fn is_focusable(&self) -> bool {
         Spec::is_focusable(self)
+    }
+
+    fn draws_focus_ring(&self) -> bool {
+        Spec::draws_focus_ring(self)
     }
 
     fn takes_pointer(&self) -> bool {

@@ -1758,7 +1758,10 @@ impl Store {
                     self.overs.push((node.id, over));
                 }
                 if control.is_focusable() {
-                    self.focus.register(node.id, hit);
+                    match control.draws_focus_ring() {
+                        true => self.focus.register(node.id, hit),
+                        false => self.focus.register_without_ring(node.id, hit),
+                    }
                     self.hits.push((node.id, hit));
                     if let Some(order) = node.order {
                         self.focus.set_order(node.id, order);

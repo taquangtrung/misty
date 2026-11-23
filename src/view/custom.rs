@@ -72,6 +72,8 @@ pub struct Canvas<'a, A> {
     measure: Option<Box<dyn Fn(f32) -> f32 + 'a>>,
     /// The name screen readers call it by.
     name: Option<&'a str>,
+    /// Whether the focus ring leaves it unmarked.
+    ringless: bool,
 }
 
 /// What the store keeps for a [`custom`] element: the widget, where it
@@ -396,6 +398,15 @@ impl<'a, A> Canvas<'a, A> {
         self
     }
 
+    /// This canvas keeping the keyboard without the focus ring around it,
+    /// for content whose pane shows the focus another way (a document's
+    /// pages, under a tab marked with the accent). Buttons and fields keep
+    /// their rings.
+    pub fn without_ring(mut self) -> Self {
+        self.ringless = true;
+        self
+    }
+
     /// This canvas as tall as `measure` says for a width in physical
     /// pixels, rather than taking the room its column leaves; a fixed size
     /// is [`Element::height`].
@@ -470,6 +481,10 @@ impl<A: 'static> Spec<A> for Canvas<'_, A> {
 
     fn is_focusable(&self) -> bool {
         self.focusable || self.keys.is_some()
+    }
+
+    fn draws_focus_ring(&self) -> bool {
+        !self.ringless
     }
 
     fn measure_widget(
@@ -627,6 +642,7 @@ pub fn canvas<'a, A>(draw: impl Fn(&mut Frame, Rect, &Theme) + 'a) -> Canvas<'a,
         keys: None,
         measure: None,
         name: None,
+        ringless: false,
     }
 }
 

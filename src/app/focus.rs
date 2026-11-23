@@ -136,6 +136,9 @@ struct FocusNode {
     parent: Option<FocusId>,
     /// Where it was drawn, in physical pixels.
     rect: Rect,
+    /// Whether the ring leaves it unmarked while it has the keyboard, as
+    /// content that shows its focus another way does.
+    ringless: bool,
 }
 
 /// An open trap: the focus stays inside one widget until it closes.
@@ -207,6 +210,16 @@ impl FocusTree {
         self.add(id, rect, true, false);
     }
 
+    /// Registers `id` as [`FocusTree::register`] does, but the ring never
+    /// outlines it: for content whose pane shows the focus another way (a
+    /// document's pages under a marked tab).
+    pub fn register_without_ring(&mut self, id: FocusId, rect: Rect) {
+        self.add(id, rect, true, false);
+        if let Some(node) = self.building.last_mut() {
+            node.ringless = true;
+        }
+    }
+
     /// Registers the widget `id`, drawn in `rect`, for the pointer only:
     /// above the widgets registered before it, but never a tab stop nor
     /// focused by a click (a title bar, a status bar with buttons).
@@ -245,6 +258,7 @@ impl FocusTree {
             id,
             parent,
             rect,
+            ringless: false,
         });
     }
 
@@ -655,7 +669,11 @@ impl FocusTree {
         if !self.ring_visible {
             return None;
         }
-        let rect = self.visible_rect(self.node(self.focused?)?)?;
+        let node = self.node(self.focused?)?;
+        if node.ringless {
+            return None;
+        }
+        let rect = self.visible_rect(node)?;
         (rect.width > 0.0 && rect.height > 0.0).then_some(rect)
     }
 
@@ -1034,6 +1052,20 @@ mod tests {
         assert!(tree.press(Point::new(50.0, 25.0)));
         assert_eq!(tree.focused(), Some(EDITOR), "not the panel around it");
         assert_eq!(tree.ring_rect(), None);
+    }
+
+    #[test]
+    fn test_a_widget_registered_without_a_ring_takes_the_keyboard_unmarked() {
+        let mut tree = FocusTree::new();
+        tree.begin_frame();
+        tree.register(TABS, row(0.0));
+        tree.register_without_ring(EDITOR, row(1.0));
+        tree.end_frame();
+        assert!(tree.focus(EDITOR));
+        assert_eq!(tree.focused(), Some(EDITOR), "it takes the keyboard");
+        assert_eq!(tree.ring_rect(), None, "but shows no ring");
+        assert!(tree.focus(TABS));
+        assert_eq!(tree.ring_rect(), Some(row(0.0)), "others keep theirs");
     }
 
     #[test]
