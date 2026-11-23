@@ -353,7 +353,13 @@ impl TabStrip {
     /// below it before it is drawn. The scale factor is unused here; every
     /// bar takes it, so an app asks each bar's height the same way.
     pub fn height(metrics: CellMetrics, _scale_factor: f64) -> f32 {
-        strip_height(metrics)
+        strip_height(metrics, None)
+    }
+
+    /// How tall this strip is for cells of `metrics`, taking its
+    /// [`TabStrip::set_height_ratio`] into account.
+    pub fn bar_height(&self, metrics: CellMetrics) -> f32 {
+        strip_height(metrics, self.options.height_ratio)
     }
 
     /// Whether the last frame cut tab `id`'s title short, or showed only
@@ -494,6 +500,13 @@ impl TabStrip {
     /// Changes the minimum width of any tab on this strip, in logical pixels.
     pub fn set_min_tab_width(&mut self, min_width: f32) {
         self.options.min_width = min_width.max(0.0);
+    }
+
+    /// Makes the strip `ratio` times the cell height tall, or the default
+    /// height for `None`: a taller strip gives its tabs more room above
+    /// and below their titles.
+    pub fn set_height_ratio(&mut self, ratio: Option<f32>) {
+        self.options.height_ratio = ratio.map(|ratio| ratio.max(1.0));
     }
 
     /// The icons tabs name, to add the ones new tabs bring as they come.

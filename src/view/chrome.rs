@@ -128,6 +128,9 @@ pub struct TabStrip<'a, A, K> {
     /// Whether the strip's pane has the keyboard, which marks its active
     /// tab with the accent.
     focused: bool,
+    /// The strip's height as a multiple of the cell height, or `None` for
+    /// the default.
+    height_ratio: Option<f32>,
     /// The icons its tabs name, if they name any.
     icons: Option<&'a IconSet>,
     /// What clicking a tab runs, with its key.
@@ -265,6 +268,8 @@ pub(crate) struct TabsProps<'a, K> {
     active: Option<&'a K>,
     /// Whether the strip's pane has the keyboard.
     focused: bool,
+    /// The strip's height as a multiple of the cell height.
+    height_ratio: Option<f32>,
     /// The icons its tabs name.
     icons: Option<&'a IconSet>,
     /// The tabs, left to right.
@@ -739,6 +744,15 @@ impl<'a, A, K> TabStrip<'a, A, K> {
         Self { focused, ..self }
     }
 
+    /// This strip `ratio` times the cell height tall (at least once),
+    /// rather than misty's default, for an app that wants roomier tabs.
+    pub fn height_ratio(self, ratio: f32) -> Self {
+        Self {
+            height_ratio: Some(ratio),
+            ..self
+        }
+    }
+
     /// What runs on the app's state, with the tab's key, when the user
     /// clicks a tab: show it. Without one the active tab stays the app's.
     pub fn on_activate(self, apply: impl Fn(&mut A, K) + 'static) -> Self {
@@ -867,6 +881,7 @@ impl<A: 'static, K: Clone + PartialEq + 'static> Spec<A> for TabStrip<'_, A, K> 
         TabsProps {
             active: self.active.as_ref(),
             focused: self.focused,
+            height_ratio: self.height_ratio,
             icons: self.icons,
             tabs: &self.tabs,
         }
@@ -1068,6 +1083,7 @@ impl<K: Clone + PartialEq + 'static> Control for TabsBox<K> {
     /// app no longer has, opens the new ones, puts each in its place,
     /// takes their titles and marks, and activates the app's active tab.
     fn sync(&mut self, props: TabsProps<'_, K>) {
+        self.strip.set_height_ratio(props.height_ratio);
         if let Some(icons) = props.icons.filter(|_| !self.has_icons) {
             self.strip.set_icons(icons.clone());
             self.has_icons = true;
@@ -1111,8 +1127,8 @@ impl<K: Clone + PartialEq + 'static> Control for TabsBox<K> {
         Widget::set_focused(&mut self.strip, props.focused);
     }
 
-    fn measure(&self, _width: f32, metrics: CellMetrics, scale_factor: f64) -> f32 {
-        tab_strip::TabStrip::height(metrics, scale_factor)
+    fn measure(&self, _width: f32, metrics: CellMetrics, _scale_factor: f64) -> f32 {
+        self.strip.bar_height(metrics)
     }
 
     /// What the strip's answer asks of the app, naming tabs by its keys.
@@ -1464,6 +1480,7 @@ pub fn tab_strip<'a, A, K: Clone>(
     TabStrip {
         active: active.cloned(),
         focused: true,
+        height_ratio: None,
         icons: None,
         on_activate: None,
         on_close: None,

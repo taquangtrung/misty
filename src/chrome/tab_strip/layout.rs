@@ -87,6 +87,9 @@ pub(crate) struct TabStripLayout {
 pub(crate) struct TabOptions {
     /// Which tabs show their close button.
     pub(crate) close: TabClose,
+    /// The strip's height as a multiple of the cell height, or `None` for
+    /// the default.
+    pub(crate) height_ratio: Option<f32>,
     /// The fewest logical pixels wide any tab may be, or `0.0` for the
     /// title-based minimum alone.
     pub(crate) min_width: f32,
@@ -144,9 +147,10 @@ struct TabSizes {
 // TabStripLayout Implementations
 // ========================================================================
 
-/// How tall a strip is for cells of `metrics`.
-pub(crate) fn strip_height(metrics: CellMetrics) -> f32 {
-    TabSizes::new(metrics, TabClose::default()).height
+/// How tall a strip is for cells of `metrics`, `height_ratio` of the
+/// cell height, or the default.
+pub(crate) fn strip_height(metrics: CellMetrics, height_ratio: Option<f32>) -> f32 {
+    TabSizes::new(metrics, TabClose::default(), height_ratio).height
 }
 
 impl TabStripLayout {
@@ -169,7 +173,7 @@ impl TabStripLayout {
     ) -> Self {
         let sizes = TabSizes {
             icon_only: options.width == TabWidth::Icon,
-            ..TabSizes::new(metrics, options.close)
+            ..TabSizes::new(metrics, options.close, options.height_ratio)
         };
         let bar = Rect::new(area.x, area.y, area.width, sizes.height.min(area.height));
         let button_width = sizes.height;
@@ -362,10 +366,12 @@ impl TabStripLayout {
 // ========================================================================
 
 impl TabSizes {
-    /// The sizes for cells of `metrics`, making room for a close button
-    /// unless `close` shows none.
-    fn new(metrics: CellMetrics, close: TabClose) -> Self {
-        let height = (metrics.height * STRIP_HEIGHT_RATIO).round();
+    /// The sizes for cells of `metrics`, `height_ratio` of the cell height
+    /// tall (or the default), making room for a close button unless
+    /// `close` shows none.
+    fn new(metrics: CellMetrics, close: TabClose, height_ratio: Option<f32>) -> Self {
+        let ratio = height_ratio.unwrap_or(STRIP_HEIGHT_RATIO);
+        let height = (metrics.height * ratio).round();
         let close = match close {
             TabClose::ActiveOrHovered | TabClose::Hovered => (height * CLOSE_SHARE).round(),
             TabClose::Never => 0.0,
@@ -991,5 +997,20 @@ mod tests {
         let layout = layout_with(options, 800.0, &tabs);
         assert_eq!(layout.slots[0].body.width, 150.0);
         assert_eq!(layout.slots[1].body.width, 239.0);
+    }
+
+    #[test]
+    fn test_a_height_ratio_makes_the_strip_and_its_tabs_taller() {
+        assert_eq!(strip_height(METRICS, None), 32.0, "1.6 cells by default");
+        assert_eq!(strip_height(METRICS, Some(2.0)), 40.0);
+        let tall = TabOptions {
+            height_ratio: Some(2.0),
+            ..TabOptions::default()
+        };
+        let layout = layout_with(tall, 800.0, &tabs(&[3]));
+        assert_eq!(
+            layout.slots[0].body.height, 40.0,
+            "the tab fills the taller strip"
+        );
     }
 }
