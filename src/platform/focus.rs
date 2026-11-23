@@ -102,7 +102,7 @@ pub(crate) fn decline_first_focus(window: &Window) {
     unix,
     not(any(target_os = "macos", target_os = "ios", target_os = "android"))
 ))]
-fn x11_window(window: &Window) -> Option<u32> {
+pub(crate) fn x11_window(window: &Window) -> Option<u32> {
     match window.window_handle().ok()?.as_raw() {
         RawWindowHandle::Xcb(handle) => Some(handle.window.get()),
         RawWindowHandle::Xlib(handle) => u32::try_from(handle.window).ok(),

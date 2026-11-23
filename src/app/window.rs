@@ -404,8 +404,9 @@ impl WindowOptions {
     /// app's own, so its corners and shadow are the system's) and on
     /// Windows 11 (which rounds by its own radius), and by `radius` logical
     /// pixels elsewhere. Windows 10 and a maximized window keep square
-    /// corners. Only a [`Decorations::Frameless`] window is rounded; a
-    /// system frame rounds itself. A frameless window is rounded by 8
+    /// corners, as does X11 with no compositing manager running, where
+    /// cut-out corners would show black. Only a [`Decorations::Frameless`]
+    /// window is rounded; a system frame rounds itself. A frameless window is rounded by 8
     /// logical pixels unless this or [`WindowOptions::with_square_corners`]
     /// says otherwise.
     pub fn with_rounded_corners(self, radius: u16) -> Self {

@@ -29,6 +29,7 @@ use super::super::base::cursor::CursorIcon;
 use super::super::input::event::{Input, InputReader};
 use super::super::platform::appearance;
 use super::super::platform::clipboard::SystemClipboard;
+use super::super::platform::compositor;
 use super::super::platform::error::Error;
 use super::super::platform::focus;
 use super::super::platform::schedule::{RedrawSchedule, earliest};
@@ -212,7 +213,10 @@ impl<A: Application> Runtime<A> {
             access_active: false,
             access_sent: None,
             access_tree: AccessTree::default(),
-            corner_radius: options.drawn_corner_radius(),
+            // Corners cut out without a compositor would show black.
+            corner_radius: options
+                .drawn_corner_radius()
+                .filter(|_| compositor::composites(&window)),
             font,
             id,
             input: InputReader::default(),

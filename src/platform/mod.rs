@@ -1,6 +1,7 @@
 //! The layer above `base`: what talks to the operating system and the event
 //! loop without drawing or knowing about widgets: the user's
-//! [`appearance`] settings, the [`clipboard`],
+//! [`appearance`] settings, the [`clipboard`], whether the desktop
+//! [`compositor`] blends windows,
 //! [`error`]s, window [`resize`] edges, the [`waker`] other threads post
 //! through, the pool of background [`jobs`] that posts through it, keyed
 //! [`deadlines`], the [`schedule`] of redraws, opening a window without
@@ -8,6 +9,7 @@
 
 pub(crate) mod appearance;
 pub(crate) mod clipboard;
+pub(crate) mod compositor;
 pub(crate) mod deadlines;
 pub(crate) mod error;
 pub(crate) mod focus;
