@@ -1,9 +1,15 @@
 //! A window's GPU surface: the swapchain configuration kept in step with
 //! the window's size, drawn to with the shared [`GpuContext`].
+//!
+//! Frames are presented without waiting for the display where the driver
+//! allows it ([`PresentMode::Mailbox`]): the window's thread, which also
+//! hears every key and click, must not park until the compositor hands a
+//! buffer back. A compositor the CPU starves (a build on every core) would
+//! hold each frame, and the window would seem to hang while it waited.
 
 use wgpu::{
-    CompositeAlphaMode, CurrentSurfaceTexture, Surface, SurfaceConfiguration, SurfaceTexture,
-    TextureFormat,
+    CompositeAlphaMode, CurrentSurfaceTexture, PresentMode, Surface, SurfaceConfiguration,
+    SurfaceTexture, TextureFormat,
 };
 
 use super::super::base::color::Rgba;
@@ -42,15 +48,16 @@ impl WindowSurface {
         transparent: bool,
     ) -> Result<Self, Error> {
         let max_side = gpu.device.limits().max_texture_dimension_2d;
-        let config = surface
+        let mut config = surface
             .get_default_config(
                 &gpu.adapter,
                 clamp_side(width, max_side),
                 clamp_side(height, max_side),
             )
             .ok_or(Error::SurfaceUnsupported)?;
-        let can_blend = surface
-            .get_capabilities(&gpu.adapter)
+        let capabilities = surface.get_capabilities(&gpu.adapter);
+        config.present_mode = present_mode(&capabilities.present_modes, config.present_mode);
+        let can_blend = capabilities
             .alpha_modes
             .contains(&CompositeAlphaMode::PreMultiplied);
         let mut this = Self {
@@ -144,6 +151,17 @@ impl WindowSurface {
 // Functions
 // ========================================================================
 
+/// How to present frames, of the modes `available`: one that never makes
+/// the window's thread wait on the display where there is one, else
+/// `default`, the one every surface has.
+fn present_mode(available: &[PresentMode], default: PresentMode) -> PresentMode {
+    if available.contains(&PresentMode::Mailbox) {
+        PresentMode::Mailbox
+    } else {
+        default
+    }
+}
+
 /// `color` with each channel scaled by its alpha.
 fn premultiplied(color: Rgba) -> Rgba {
     let scale = |channel: u8| (u16::from(channel) * u16::from(color.a) / u16::from(u8::MAX)) as u8;
@@ -154,4 +172,24 @@ fn premultiplied(color: Rgba) -> Rgba {
 /// pixel and at most `max_side`.
 fn clamp_side(side: u32, max_side: u32) -> u32 {
     side.clamp(1, max_side)
+}
+
+// ========================================================================
+// Tests
+// ========================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_frames_skip_the_wait_for_the_display_where_the_driver_offers_it() {
+        let offered = [PresentMode::Fifo, PresentMode::Immediate, PresentMode::Mailbox];
+        assert_eq!(present_mode(&offered, PresentMode::Fifo), PresentMode::Mailbox);
+        assert_eq!(
+            present_mode(&[PresentMode::Fifo], PresentMode::Fifo),
+            PresentMode::Fifo,
+            "every surface presents in turn, so that is kept where nothing else is"
+        );
+    }
 }
