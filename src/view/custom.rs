@@ -55,6 +55,8 @@ pub struct Custom<'a, A, W: Widget> {
     name: Option<&'a str>,
     /// What the widget's responses run on the app's state.
     respond: Option<Respond<'a, A, W>>,
+    /// Whether the focus ring leaves it unmarked.
+    ringless: bool,
     /// What copies the app's state into the widget at each rebuild.
     sync: Option<SyncWidget<'a, W>>,
 }
@@ -202,6 +204,15 @@ impl<'a, A, W: Widget + 'static> Custom<'a, A, W> {
         self
     }
 
+    /// This element keeping the keyboard without the focus ring around
+    /// it, as [`Canvas::without_ring`] does for a canvas: for content
+    /// whose pane shows the focus another way (an editor or a book under a
+    /// tab marked with the accent).
+    pub fn without_ring(mut self) -> Self {
+        self.ringless = true;
+        self
+    }
+
     /// This element described to screen readers by its widget, through
     /// `describe` (most widgets have an `access(frame, id)` of their own),
     /// rather than as a group named [`Custom::name`].
@@ -287,6 +298,10 @@ impl<A: 'static, W: Widget + 'static> Spec<A> for Custom<'_, A, W> {
 
     fn is_focusable(&self) -> bool {
         self.focusable
+    }
+
+    fn draws_focus_ring(&self) -> bool {
+        !self.ringless
     }
 
     fn takes_pointer(&self) -> bool {
@@ -581,6 +596,7 @@ pub fn custom<'a, A, W: Widget + 'static>(create: impl Fn() -> W + 'a) -> Custom
         measure: None,
         name: None,
         respond: None,
+        ringless: false,
         sync: None,
     }
 }
