@@ -165,12 +165,22 @@ pub trait App: Sized + 'static {
     /// when it next needs calling even if nothing happens, or `None` to
     /// wait for the next input; [`Deadlines`](crate::Deadlines) keeps
     /// several timers. Misty redraws every window once a time it returned
-    /// has come; `cx.event_cx().request_redraw()` asks sooner. `cx` is the
+    /// has come, unless [`App::redraw_when_due`] says not to;
+    /// `cx.event_cx().request_redraw()` asks sooner. `cx` is the
     /// window that had the last input, or the first window. Tests call it
     /// through `TreeWindow::about_to_wait` and choose `now` with
     /// `TreeWindow::about_to_wait_at`. The default asks for nothing.
     fn about_to_wait(&mut self, _now: Instant, _cx: &mut AppCx<'_>) -> Option<Instant> {
         None
+    }
+
+    /// Whether misty redraws every window once a time
+    /// [`App::about_to_wait`] returned has come. An app that asks for a
+    /// redraw itself whenever a timer changed what it shows says `false`,
+    /// so a timer that only polls for work done elsewhere (a reply not
+    /// there yet) costs no frame. The default redraws.
+    fn redraw_when_due(&self) -> bool {
+        true
     }
 
     /// The user asked to close `window` (its close button, Alt+F4, a title

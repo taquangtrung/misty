@@ -98,8 +98,8 @@ impl<A: App> Application for TreeRunner<A> {
 
     /// Forgets the windows that closed since, runs the app's own
     /// [`App::about_to_wait`] on the window that had the last input
-    /// (redrawing every window once a time it asked for has come), then
-    /// steps every window's tree.
+    /// (redrawing every window once a time it asked for has come, as
+    /// [`App::redraw_when_due`] allows), then steps every window's tree.
     fn about_to_wait(&mut self, cx: &mut AppContext<'_, Update<A>>) -> Option<Instant> {
         let open: Vec<WindowId> = cx.window_ids().collect();
         let closed: Vec<WindowId> = self
@@ -118,7 +118,7 @@ impl<A: App> Application for TreeRunner<A> {
             .or_else(|| open.first().copied());
         let now = Instant::now();
         // A timer that came due changed the app's state for every window.
-        let fired = self.app_due.is_some_and(|due| due <= now);
+        let fired = self.app.redraw_when_due() && self.app_due.is_some_and(|due| due <= now);
         let app_due = active.and_then(|window| {
             let mut app_cx = AppCx::new(cx.event_cx(window));
             let due = self.app.about_to_wait(now, &mut app_cx);
