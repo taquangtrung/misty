@@ -275,8 +275,7 @@ Window \"misty tree\" focused
 ";
 
     /// The hand-driven start's text drawn.
-    const HAND_DRIVEN_START_DRAWN: [&str; 3] = [
-        "▸",
+    const HAND_DRIVEN_START_DRAWN: [&str; 2] = [
         "misty-tree-root",
         " 0 selected      Right expands, Left collapses, F5 reloads",
     ];
@@ -289,8 +288,7 @@ Window \"misty tree\" focused
 ";
 
     /// The hand-driven text drawn after Space and Enter.
-    const HAND_DRIVEN_OPENED_DRAWN: [&str; 3] = [
-        "▸",
+    const HAND_DRIVEN_OPENED_DRAWN: [&str; 2] = [
         "misty-tree-root",
         " 1 selected      opened /misty-tree-root",
     ];
@@ -315,10 +313,8 @@ Window \"misty tree\" focused
 ";
 
     /// The hand-driven text drawn with the folder `a` loading.
-    const HAND_DRIVEN_LOADING_DRAWN: [&str; 8] = [
-        "▾",
+    const HAND_DRIVEN_LOADING_DRAWN: [&str; 6] = [
         "misty-tree-root",
-        "▾",
         "a",
         "Loading",
         "…",

@@ -18,6 +18,8 @@ const RESTORE_FRONT_SHARE: f32 = 0.75;
 /// An icon on a chrome button.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Icon {
+    /// A downward-pointing angle, for an open fold.
+    ChevronDown,
     /// A left-pointing angle, for stepping back or previous.
     ChevronLeft,
     /// A right-pointing angle, for stepping forward or next.
@@ -56,6 +58,30 @@ impl Icon {
         let left = (area.x + (area.width - size) / 2.0).round();
         let top = (area.y + (area.height - size) / 2.0).round();
         match self {
+            Self::ChevronDown => {
+                let chevron_height = (size / 2.0).round();
+                let top = (area.y + (area.height - chevron_height) / 2.0).round();
+                let steps = (chevron_height / stroke).round() as usize;
+                (0..=steps)
+                    .flat_map(|step| {
+                        let offset = step as f32 * stroke;
+                        [
+                            Rect::new(
+                                left + (size / 2.0) - offset,
+                                top + chevron_height - offset - stroke,
+                                stroke,
+                                stroke,
+                            ),
+                            Rect::new(
+                                left + (size / 2.0) + offset,
+                                top + chevron_height - offset - stroke,
+                                stroke,
+                                stroke,
+                            ),
+                        ]
+                    })
+                    .collect()
+            }
             Self::ChevronLeft => {
                 let chevron_width = (size / 2.0).round();
                 let left = (area.x + (area.width - chevron_width) / 2.0).round();
@@ -175,6 +201,7 @@ mod tests {
     fn test_icons_stay_inside_their_area() {
         let area = Rect::new(752.0, 0.0, 48.0, 32.0);
         let icons = [
+            Icon::ChevronDown,
             Icon::ChevronLeft,
             Icon::ChevronRight,
             Icon::Close,

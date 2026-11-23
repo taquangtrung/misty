@@ -59,6 +59,7 @@ use super::super::base::strings::{self, Strings};
 use super::super::base::styled::{Span, StyledText, TextColor, TextSize};
 use super::super::base::theme::{Theme, ThemeToken};
 use super::super::input::event::Input;
+use super::super::render::icon::Icon;
 use super::super::render::paragraph::TextAlign;
 use super::list_keys::{CountedKey, ListKey, ListKeys, Read};
 use super::list_view::{List, ListResponse, RowDrop, RowsToDraw};
@@ -76,6 +77,17 @@ pub(crate) const PADDING_CELLS: usize = 1;
 
 /// The cells the arrow and the space after it take.
 pub(crate) const ARROW_CELLS: usize = 2;
+
+/// The side of the chevron a node shows, in logical pixels.
+const CHEVRON_SIZE: f32 = 8.0;
+
+/// The thickness of the chevron's strokes, in logical pixels.
+const CHEVRON_STROKE: f32 = 1.0;
+
+/// How much more room a row has above and below its label than the
+/// theme's [`Shape::row_padding`](crate::Shape::row_padding) gives a menu's,
+/// so a tree such as a sidebar reads at an easy pace.
+const ROW_PADDING_SCALE: f32 = 1.5;
 
 /// The arrow of a collapsed node.
 pub(crate) const COLLAPSED_ARROW: &str = "▸";
@@ -938,7 +950,7 @@ impl<K: Clone + Eq + Hash> Widget for TreeView<K> {
     }
 
     /// Draws the rows that fit in `area` in `theme`'s colors: each indented
-    /// by its depth, nodes with an arrow pointing right when collapsed and
+    /// by its depth, nodes with a chevron pointing right when collapsed and
     /// down when expanded, a loading row muted and a failure in the danger
     /// color, a section's title small and muted at the foot of its row,
     /// cursor and selection as a [`List`] draws them.
@@ -949,8 +961,9 @@ impl<K: Clone + Eq + Hash> Widget for TreeView<K> {
         let words = &theme.strings;
         let metrics = frame.cell_metrics();
         self.cell_width = metrics.width;
+        let scale_factor = frame.scale_factor();
         let row_padding =
-            (f32::from(theme.shape.row_padding) * frame.scale_factor() as f32).round();
+            (f32::from(theme.shape.row_padding) * ROW_PADDING_SCALE * scale_factor as f32).round();
         let rows = RowsToDraw {
             area,
             count: self.rows.len(),
@@ -988,12 +1001,16 @@ impl<K: Clone + Eq + Hash> Widget for TreeView<K> {
                 }
                 RowKind::Item(item) => {
                     if item.has_children {
-                        let arrow = match expanded.contains(&item.id) {
-                            true => EXPANDED_ARROW,
-                            false => COLLAPSED_ARROW,
+                        let chevron = match expanded.contains(&item.id) {
+                            true => Icon::ChevronDown,
+                            false => Icon::ChevronRight,
                         };
-                        let arrow = StyledText::plain(arrow, QUIET_COLOR);
-                        frame.draw_text(&arrow, Point::new(x, y), rect, theme);
+                        let area = Rect::new(x, y, metrics.width, metrics.height);
+                        let strokes =
+                            chevron.strokes(area, CHEVRON_SIZE, CHEVRON_STROKE, scale_factor);
+                        for stroke in strokes {
+                            frame.fill_rect_over_text(stroke, theme.muted);
+                        }
                     }
                     if let Some(content) = &item.content {
                         draw_content_in(frame, content, clip, TextAlign::Start, theme, font);
@@ -1468,7 +1485,6 @@ mod tests {
         let mut frame = drawn(&mut tree);
         let text = drawn_text(&frame).concat();
         assert!(text.contains("BOOKMARKS"), "{text}");
-        assert_eq!(text.matches(COLLAPSED_ARROW).count(), 1, "only b's: {text}");
         let id = FocusId::new("sidebar");
         tree.access(&mut frame, id);
         let update = frame.access.tree_update("t");
