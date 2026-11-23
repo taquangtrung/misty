@@ -1,0 +1,117 @@
+[package]
+name = "misty"
+description = "A GPU-rendered, keyboard-first GUI framework for Rust desktop apps: window runtime, chrome, widgets, and themes."
+version = "0.0.2"
+edition = "2024"
+authors = ["Trung Ta <taquangtrungvn@gmail.com>"]
+license = "MIT OR Apache-2.0"
+rust-version = "1.100"
+keywords = ["gui", "wgpu", "desktop", "widgets", "keyboard"]
+categories = ["gui"]
+include = ["CHANGELOG.md", "Cargo.toml", "LICENSE-APACHE", "LICENSE-MIT", "README.md", "examples/**/*.rs", "src/**/*.rs", "src/**/*.wgsl", "tests/**/*.rs"]
+repository = "https://github.com/taquangtrung/misty"
+
+[package.metadata.docs.rs]
+all-features = true
+
+[lints.rust]
+missing_docs = "deny"
+unsafe_code = "deny"
+
+[lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+
+[features]
+default = ["highlight"]
+dialogs = ["dep:rfd"]
+files = []
+global-hotkey = ["dep:global-hotkey"]
+highlight = ["dep:iris"]
+html = ["dep:html5gum"]
+icon-theme = ["dep:mime_guess"]
+kdl = ["dep:kdl"]
+markdown = ["dep:pulldown-cmark"]
+notify = ["dep:notify-rust"]
+serde = ["dep:serde"]
+single-instance = ["dep:interprocess"]
+testing = []
+tray = ["dep:ksni", "dep:tray-icon"]
+
+[dependencies]
+accesskit = "0.25"
+# accesskit_winit 0.34 pairs with winit 0.30 and accesskit 0.25: move all three together.
+accesskit_winit = "0.34"
+arboard = { version = "3", default-features = false, features = ["wayland-data-control"] }
+global-hotkey = { version = "0.10", optional = true }
+glyphon = "0.12"
+html5gum = { version = "0.8", optional = true }
+image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "tiff", "webp"] }
+iris = { path = "../iris/crates/iris", version = "0.0.1", features = ["grammars"], optional = true }
+mime_guess = { version = "2", default-features = false, optional = true }
+kdl = { version = "6", default-features = false, optional = true }
+log = "0.4"
+lyon_tessellation = "1"
+# Held below 4.19, which moves to zbus 6 and would build a second zbus.
+notify-rust = { version = "~4.18", default-features = false, features = ["z"], optional = true }
+pollster = "0.4"
+pulldown-cmark = { version = "0.13", default-features = false, optional = true }
+regex = "1"
+rfd = { version = "0.18", optional = true }
+resvg = { version = "0.48", default-features = false }
+serde = { version = "1", features = ["derive"], optional = true }
+taffy = { version = "0.15", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size"] }
+thiserror = "2"
+unicode-bidi = { version = "0.3", default-features = false, features = ["std", "hardcoded-data"] }
+unicode-width = "0.2"
+wgpu = "30"
+winit = "0.30"
+
+[target.'cfg(all(unix, not(any(target_os = "macos", target_os = "ios", target_os = "android"))))'.dependencies]
+ksni = { version = "0.3", default-features = false, features = ["async-io", "blocking"], optional = true }
+zbus = { version = "5", default-features = false, features = ["async-io", "blocking-api"] }
+x11rb = { version = "0.13", default-features = false }
+
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+# Its Linux backend (GTK) stays off: ksni serves Linux and the BSDs.
+tray-icon = { version = "0.24", default-features = false, optional = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+interprocess = { version = "2", default-features = false, optional = true }
+
+# The examples below run their headless tests with `cargo test` (feature `testing`).
+[[example]]
+name = "getting_started"
+test = true
+
+[[example]]
+name = "controls"
+test = true
+
+[[example]]
+name = "dialog"
+test = true
+
+[[example]]
+name = "list"
+test = true
+
+[[example]]
+name = "table"
+test = true
+
+[[example]]
+name = "tree"
+test = true
+
+[[example]]
+name = "grid"
+test = true
+
+[[example]]
+name = "chrome"
+test = true
+
+[[example]]
+name = "workbench"
+test = true
