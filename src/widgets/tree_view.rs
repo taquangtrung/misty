@@ -52,6 +52,7 @@ use super::super::app::focus::FocusId;
 use super::super::app::frame::Frame;
 use super::super::app::widget::{Outcome, Widget};
 use super::super::base::clock;
+use super::super::base::color::Rgb;
 use super::super::base::geometry::{Point, Rect};
 use super::super::base::key::Key;
 use super::super::base::list::ListState;
@@ -88,12 +89,6 @@ const CHEVRON_STROKE: f32 = 1.0;
 /// theme's [`Shape::row_padding`](crate::Shape::row_padding) gives a menu's,
 /// so a tree such as a sidebar reads at an easy pace.
 const ROW_PADDING_SCALE: f32 = 1.5;
-
-/// The arrow of a collapsed node.
-pub(crate) const COLLAPSED_ARROW: &str = "▸";
-
-/// The arrow of an expanded node.
-pub(crate) const EXPANDED_ARROW: &str = "▾";
 
 /// The color of items' labels.
 const LABEL_COLOR: TextColor = TextColor::Token(ThemeToken::Foreground);
@@ -1001,16 +996,9 @@ impl<K: Clone + Eq + Hash> Widget for TreeView<K> {
                 }
                 RowKind::Item(item) => {
                     if item.has_children {
-                        let chevron = match expanded.contains(&item.id) {
-                            true => Icon::ChevronDown,
-                            false => Icon::ChevronRight,
-                        };
                         let area = Rect::new(x, y, metrics.width, metrics.height);
-                        let strokes =
-                            chevron.strokes(area, CHEVRON_SIZE, CHEVRON_STROKE, scale_factor);
-                        for stroke in strokes {
-                            frame.fill_rect_over_text(stroke, theme.muted);
-                        }
+                        let open = expanded.contains(&item.id);
+                        draw_chevron(frame, area, open, theme.muted);
                     }
                     if let Some(content) = &item.content {
                         draw_content_in(frame, content, clip, TextAlign::Start, theme, font);
@@ -1053,6 +1041,19 @@ impl<K: Clone + Eq + Hash> Default for TreeView<K> {
 // ========================================================================
 // Functions
 // ========================================================================
+
+/// Draws the chevron of a node centered in `area` in `color`: pointing
+/// down when `open`, right when not.
+pub(crate) fn draw_chevron(frame: &mut Frame, area: Rect, open: bool, color: Rgb) {
+    let chevron = match open {
+        true => Icon::ChevronDown,
+        false => Icon::ChevronRight,
+    };
+    let strokes = chevron.strokes(area, CHEVRON_SIZE, CHEVRON_STROKE, frame.scale_factor());
+    for stroke in strokes {
+        frame.fill_rect_over_text(stroke, color);
+    }
+}
 
 /// A version no [`TreeItems`] had yet.
 fn next_version() -> u64 {

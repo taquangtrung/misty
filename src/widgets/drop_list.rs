@@ -27,7 +27,7 @@ use super::super::base::text;
 use super::super::base::theme::{Theme, ThemeToken};
 use super::super::input::event::{Input, PointerButton};
 use super::popup::Popup;
-use super::tree_view::{ARROW_CELLS, COLLAPSED_ARROW, EXPANDED_ARROW, INDENT_CELLS, PADDING_CELLS};
+use super::tree_view::{ARROW_CELLS, INDENT_CELLS, PADDING_CELLS, draw_chevron};
 
 // ========================================================================
 // Constants
@@ -166,22 +166,14 @@ impl DropList {
             );
         }
         // Muted text would fade into the selection color.
-        let quiet = TextColor::Token(match lit {
-            true => ThemeToken::Foreground,
-            false => ThemeToken::Muted,
-        });
+        let (quiet, chevron) = match lit {
+            true => (TextColor::Token(ThemeToken::Foreground), theme.foreground),
+            false => (TextColor::Token(ThemeToken::Muted), theme.muted),
+        };
         let arrow_x = rows.x + (PADDING_CELLS + row.depth * INDENT_CELLS) as f32 * metrics.width;
         if let Some(open) = row.fold {
-            let arrow = match open {
-                true => EXPANDED_ARROW,
-                false => COLLAPSED_ARROW,
-            };
-            frame.draw_text(
-                &StyledText::plain(arrow, quiet),
-                Point::new(arrow_x, top),
-                line,
-                theme,
-            );
+            let area = Rect::new(arrow_x, top, metrics.width, metrics.height);
+            draw_chevron(frame, area, open, chevron);
         }
         let label_x = arrow_x + ARROW_CELLS as f32 * metrics.width;
         let right = rows.x + rows.width - PADDING_CELLS as f32 * metrics.width;
