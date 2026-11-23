@@ -43,6 +43,10 @@ use super::popup::PopupSide;
 // Constants
 // ========================================================================
 
+/// The room above and below the buttons, in logical pixels, so the bar
+/// stands a little taller than its buttons.
+const BAR_PADDING: f32 = 4.0;
+
 /// What the "more" button shows.
 const MORE_GLYPH: &str = "\u{2026}";
 
@@ -269,11 +273,11 @@ impl<I: Copy + PartialEq> Toolbar<I> {
             .any(|(_, button)| button.id == id && button.active)
     }
 
-    /// How tall it is drawn with `metrics`: as tall as a button.
-    /// The scale factor is unused here; every control takes it, so an app
-    /// asks each control's height the same way.
-    pub fn height(&self, metrics: CellMetrics, _scale_factor: f64) -> f32 {
-        face_height(metrics)
+    /// How tall it is drawn with `metrics` on a display scaled by
+    /// `scale_factor`: as tall as a button, with a little room above and
+    /// below.
+    pub fn height(&self, metrics: CellMetrics, scale_factor: f64) -> f32 {
+        face_height(metrics) + 2.0 * logical(BAR_PADDING, scale_factor)
     }
 
     /// How wide its items are drawn in `frame` and `theme` with none
@@ -818,10 +822,17 @@ impl<I: Copy + PartialEq> Widget for Toolbar<I> {
         }
         let metrics = frame.cell_metrics();
         let scale_factor = frame.scale_factor();
-        let height = face_height(metrics).min(area.height);
-        let bar = Rect::new(area.x, area.y, area.width, height);
+        let bar_height = self.height(metrics, scale_factor).min(area.height);
+        let bar = Rect::new(area.x, area.y, area.width, bar_height);
+        let height = face_height(metrics).min(bar_height);
+        let row = Rect::new(
+            area.x,
+            (area.y + (bar_height - height) / 2.0).round(),
+            area.width,
+            height,
+        );
         let (separator, gap) = spacing(frame);
-        let layout = self.lay_out(bar, height, separator, gap, |button| {
+        let layout = self.lay_out(row, height, separator, gap, |button| {
             button.face_width(frame, theme)
         });
         let stroke = logical(SEPARATOR_STROKE, scale_factor);
