@@ -16,7 +16,7 @@ use super::{
 // ========================================================================
 
 /// The bar's height as a multiple of the cell height.
-const BAR_HEIGHT_RATIO: f32 = 1.6;
+const BAR_HEIGHT_RATIO: f32 = 2.0;
 
 /// A button's width as a multiple of the bar's height.
 const BUTTON_WIDTH_RATIO: f32 = 1.5;
@@ -61,9 +61,10 @@ pub(crate) struct TitleBarLayout {
 // Functions
 // ========================================================================
 
-/// How tall a title bar is for cells of `metrics`.
-pub(crate) fn bar_height(metrics: CellMetrics) -> f32 {
-    (metrics.height * BAR_HEIGHT_RATIO).round()
+/// How tall a title bar is for cells of `metrics`: `height_ratio` times
+/// the cell height, or misty's default ratio for `None`.
+pub(crate) fn bar_height(metrics: CellMetrics, height_ratio: Option<f32>) -> f32 {
+    (metrics.height * height_ratio.unwrap_or(BAR_HEIGHT_RATIO)).round()
 }
 
 // ========================================================================
@@ -71,8 +72,9 @@ pub(crate) fn bar_height(metrics: CellMetrics) -> f32 {
 // ========================================================================
 
 impl TitleBarLayout {
-    /// The layout in `window`, sized for cells of `metrics` on a display
-    /// scaled by `scale_factor`, with a menu button when `has_menu_button`,
+    /// The layout in `window`, sized for cells of `metrics` (the bar
+    /// `height_ratio` cells tall, or misty's default for `None`) on a
+    /// display scaled by `scale_factor`, with a menu button when `has_menu_button`,
     /// a menubar of titles `menu_widths` wide (as labels in the chrome
     /// font, in pixels, before their padding), and the app's buttons, each
     /// as wide as its content in `app_widths` (0 for an icon alone, which
@@ -84,13 +86,14 @@ impl TitleBarLayout {
     pub(crate) fn new(
         window: Rect,
         metrics: CellMetrics,
+        height_ratio: Option<f32>,
         scale_factor: f64,
         has_menu_button: bool,
         menu_widths: &[f32],
         app_widths: &[f32],
         buttons: WindowButtons,
     ) -> Self {
-        let height = bar_height(metrics);
+        let height = bar_height(metrics, height_ratio);
         let button_width = (height * BUTTON_WIDTH_RATIO).round();
         let right = window.x + window.width;
         // The `index`th button from the edge the buttons sit at, close

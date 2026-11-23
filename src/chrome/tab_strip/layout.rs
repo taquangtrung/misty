@@ -12,9 +12,14 @@ use crate::render::font::CellMetrics;
 // ========================================================================
 
 /// The strip's height as a multiple of the cell height.
-const STRIP_HEIGHT_RATIO: f32 = 1.6;
+const STRIP_HEIGHT_RATIO: f32 = 2.0;
 
-/// The close button's side as a share of the strip's height.
+/// The width of the strip's buttons as a multiple of the cell height,
+/// the same however tall the strip is, so a taller strip gives its tabs
+/// more room above and below without widening them.
+const BUTTON_RATIO: f32 = 1.6;
+
+/// The close button's side as a share of a strip button's width.
 const CLOSE_SHARE: f32 = 0.6;
 
 /// The fewest cells of room a tab makes for its title, so a short title
@@ -127,6 +132,8 @@ pub(crate) struct TabSlot {
 /// The sizes every tab shares, in physical pixels.
 #[derive(Clone, Copy, Debug)]
 struct TabSizes {
+    /// The width of the prev, next, and new-tab buttons.
+    button: f32,
     /// The close button's side.
     close: f32,
     /// One cell's width.
@@ -176,7 +183,7 @@ impl TabStripLayout {
             ..TabSizes::new(metrics, options.close, options.height_ratio)
         };
         let bar = Rect::new(area.x, area.y, area.width, sizes.height.min(area.height));
-        let button_width = sizes.height;
+        let button_width = sizes.button;
         let new_tab_width = if options.no_new_tab {
             0.0
         } else {
@@ -372,11 +379,13 @@ impl TabSizes {
     fn new(metrics: CellMetrics, close: TabClose, height_ratio: Option<f32>) -> Self {
         let ratio = height_ratio.unwrap_or(STRIP_HEIGHT_RATIO);
         let height = (metrics.height * ratio).round();
+        let button = (metrics.height * BUTTON_RATIO).round();
         let close = match close {
-            TabClose::ActiveOrHovered | TabClose::Hovered => (height * CLOSE_SHARE).round(),
+            TabClose::ActiveOrHovered | TabClose::Hovered => (button * CLOSE_SHARE).round(),
             TabClose::Never => 0.0,
         };
         Self {
+            button,
             close,
             cell: metrics.width,
             icon: (metrics.height * ICON_SHARE).round(),
@@ -551,13 +560,24 @@ mod tests {
     use super::*;
     use crate::base::text;
 
-    /// A 32 pixel strip: padding 10, close button 19 (rounded from 19.2),
-    /// new-tab button 32 wide.
+    /// The strip's height ratio the pixel figures below are worked out at.
+    const RATIO: f32 = 1.6;
+
+    /// A 32 pixel strip at [`RATIO`]: padding 10, close button 19 (rounded
+    /// from 19.2), new-tab button 32 wide.
     const METRICS: CellMetrics = CellMetrics {
         baseline: 15.0,
         height: 20.0,
         width: 10.0,
     };
+
+    /// The default options at [`RATIO`].
+    fn options() -> TabOptions {
+        TabOptions {
+            height_ratio: Some(RATIO),
+            ..TabOptions::default()
+        }
+    }
 
     /// Tabs titled with `cells` characters each, ids 0 up.
     fn tabs(cells: &[usize]) -> Vec<Tab> {
@@ -580,7 +600,7 @@ mod tests {
             Rect::new(0.0, 0.0, width, 600.0),
             METRICS,
             1.0,
-            TabOptions::default(),
+            options(),
             tabs,
             &cell_widths(tabs, METRICS),
             first,
@@ -619,7 +639,7 @@ mod tests {
     fn test_filling_tabs_share_the_strip_up_to_the_widest_a_tab_gets() {
         let fill = TabOptions {
             width: TabWidth::Fill,
-            ..TabOptions::default()
+            ..options()
         };
         let widths = |layout: TabStripLayout| -> Vec<f32> {
             layout.slots.iter().map(|slot| slot.body.width).collect()
@@ -645,7 +665,7 @@ mod tests {
     fn test_filling_tabs_edges_move_a_pixel_at_a_time_as_the_strip_widens() {
         let fill = TabOptions {
             width: TabWidth::Fill,
-            ..TabOptions::default()
+            ..options()
         };
         let three = tabs(&[1, 1, 1]);
         let edges = |width: f32| -> Vec<f32> {
@@ -673,7 +693,7 @@ mod tests {
     fn test_tabs_without_close_buttons_make_no_room_and_their_corner_hits_the_tab() {
         let never = TabOptions {
             close: TabClose::Never,
-            ..TabOptions::default()
+            ..options()
         };
         let tabs = tabs(&[1]);
         let layout = layout_with(never, 800.0, &tabs);
@@ -688,7 +708,7 @@ mod tests {
         let icon = TabOptions {
             min_width: 150.0,
             width: TabWidth::Icon,
-            ..TabOptions::default()
+            ..options()
         };
         let mut tabs = tabs(&[1, 30]);
         for tab in &mut tabs {
@@ -717,7 +737,7 @@ mod tests {
         let fill = TabOptions {
             no_new_tab: true,
             width: TabWidth::Fill,
-            ..TabOptions::default()
+            ..options()
         };
         let tabs = tabs(&[1, 1]);
         let layout = layout_with(fill, 400.0, &tabs);
@@ -773,16 +793,7 @@ mod tests {
         let tabs = tabs(&[6, 7, 13]);
         let area = Rect::new(0.0, 0.0, 2000.0, 600.0);
         let widths = cell_widths(&tabs, metrics);
-        let layout = TabStripLayout::new(
-            area,
-            metrics,
-            1.0,
-            TabOptions::default(),
-            &tabs,
-            &widths,
-            0,
-            None,
-        );
+        let layout = TabStripLayout::new(area, metrics, 1.0, options(), &tabs, &widths, 0, None);
         for (slot, width) in layout.slots.iter().zip(widths) {
             assert!(
                 metrics.cols_in(slot.title_room) >= metrics.cols_in(width),
@@ -917,7 +928,7 @@ mod tests {
             Rect::new(0.0, 0.0, 400.0, 400.0),
             compact,
             1.0,
-            TabOptions::default(),
+            options(),
             &tabs,
             &widths,
             1,
@@ -991,7 +1002,7 @@ mod tests {
     fn test_min_width_keeps_short_tabs_at_least_that_wide() {
         let options = TabOptions {
             min_width: 150.0,
-            ..TabOptions::default()
+            ..options()
         };
         let tabs = tabs(&[1, 20]);
         let layout = layout_with(options, 800.0, &tabs);
@@ -1001,16 +1012,22 @@ mod tests {
 
     #[test]
     fn test_a_height_ratio_makes_the_strip_and_its_tabs_taller() {
-        assert_eq!(strip_height(METRICS, None), 32.0, "1.6 cells by default");
-        assert_eq!(strip_height(METRICS, Some(2.0)), 40.0);
+        assert_eq!(strip_height(METRICS, None), 40.0, "2 cells by default");
+        assert_eq!(strip_height(METRICS, Some(2.5)), 50.0);
         let tall = TabOptions {
-            height_ratio: Some(2.0),
+            height_ratio: Some(2.5),
             ..TabOptions::default()
         };
         let layout = layout_with(tall, 800.0, &tabs(&[3]));
         assert_eq!(
-            layout.slots[0].body.height, 40.0,
+            layout.slots[0].body.height, 50.0,
             "the tab fills the taller strip"
         );
+        let short = layout_with(options(), 800.0, &tabs(&[3]));
+        assert_eq!(
+            layout.slots[0].body.width, short.slots[0].body.width,
+            "but stays as wide"
+        );
+        assert_eq!(layout.new_tab.map(|rect| rect.width), Some(32.0));
     }
 }

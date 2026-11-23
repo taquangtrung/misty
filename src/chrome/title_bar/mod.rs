@@ -126,6 +126,9 @@ pub struct TitleBar {
     focused: bool,
     /// Whether the bar shows a menu button at its left.
     has_menu_button: bool,
+    /// The bar's height as a multiple of the cell height, or `None` for
+    /// misty's default.
+    height_ratio: Option<f32>,
     /// What the pointer is over.
     hovered: Option<TitleBarHit>,
     /// When and where the drag region was last pressed, for double clicks.
@@ -265,6 +268,7 @@ impl TitleBar {
             buttons: WindowButtons::Right,
             focused: true,
             has_menu_button: false,
+            height_ratio: None,
             hovered: None,
             last_press: None,
             layout: None,
@@ -298,7 +302,20 @@ impl TitleBar {
     /// sits below it before it is drawn. The scale factor is unused here;
     /// every bar takes it, so an app asks each bar's height the same way.
     pub fn height(metrics: CellMetrics, _scale_factor: f64) -> f32 {
-        bar_height(metrics)
+        bar_height(metrics, None)
+    }
+
+    /// How tall this bar is for cells of `metrics`, taking its
+    /// [`TitleBar::set_height_ratio`] into account.
+    pub fn bar_height(&self, metrics: CellMetrics) -> f32 {
+        bar_height(metrics, self.height_ratio)
+    }
+
+    /// Makes the bar `ratio` times the cell height tall (at least once),
+    /// or the default height for `None`, for an app that keeps a bar of
+    /// its own height.
+    pub fn set_height_ratio(&mut self, ratio: Option<f32>) {
+        self.height_ratio = ratio.map(|ratio| ratio.max(1.0));
     }
 
     /// This title bar with a menubar of menus titled `titles`, left to
@@ -824,6 +841,7 @@ impl Widget for TitleBar {
         let layout = TitleBarLayout::new(
             area,
             metrics,
+            self.height_ratio,
             scale_factor,
             self.has_menu_button,
             &menu_widths,
@@ -1079,9 +1097,10 @@ mod tests {
     use crate::input::event::ButtonInput;
     use crate::testing::TestWindow;
 
+    /// Cells 16 pixels high, for a 32 pixel bar.
     const METRICS: CellMetrics = CellMetrics {
-        baseline: 15.0,
-        height: 20.0,
+        baseline: 12.0,
+        height: 16.0,
         width: 10.0,
     };
 
@@ -1090,7 +1109,16 @@ mod tests {
     /// The bar is 32 pixels high and each button 48 wide, so the buttons
     /// start at 800 - 144 = 656.
     fn layout() -> TitleBarLayout {
-        TitleBarLayout::new(WINDOW, METRICS, 1.0, false, &[], &[], WindowButtons::Right)
+        TitleBarLayout::new(
+            WINDOW,
+            METRICS,
+            None,
+            1.0,
+            false,
+            &[],
+            &[],
+            WindowButtons::Right,
+        )
     }
 
     #[test]
@@ -1169,8 +1197,16 @@ mod tests {
 
     #[test]
     fn test_the_menu_button_sits_at_the_left_inside_the_resize_border() {
-        let layout =
-            TitleBarLayout::new(WINDOW, METRICS, 1.0, true, &[], &[], WindowButtons::Right);
+        let layout = TitleBarLayout::new(
+            WINDOW,
+            METRICS,
+            None,
+            1.0,
+            true,
+            &[],
+            &[],
+            WindowButtons::Right,
+        );
         let hit = |x: f32, y: f32| layout.hit(Point::new(x, y), false);
         assert_eq!(hit(20.0, 16.0), Some(TitleBarHit::MenuButton));
         assert_eq!(hit(47.0, 16.0), Some(TitleBarHit::MenuButton));
@@ -1201,6 +1237,7 @@ mod tests {
         let layout = TitleBarLayout::new(
             WINDOW,
             METRICS,
+            None,
             1.0,
             true,
             &menu_widths(),
@@ -1226,6 +1263,7 @@ mod tests {
         let layout = TitleBarLayout::new(
             WINDOW,
             METRICS,
+            None,
             1.0,
             true,
             &menu_widths(),
@@ -1238,6 +1276,16 @@ mod tests {
         assert_eq!(hit(60.0, 16.0), Some(TitleBarHit::MenuTitle(0)));
         assert_eq!(hit(780.0, 16.0), None, "the empty bar moves nothing");
         assert_eq!(layout.middle.x + layout.middle.width, 800.0);
+    }
+
+    #[test]
+    fn test_a_height_ratio_sets_the_bar_s_height_down_to_a_cell() {
+        let mut bar = TitleBar::new("t");
+        assert_eq!(bar.bar_height(METRICS), 32.0, "2 cells by default");
+        bar.set_height_ratio(Some(1.6));
+        assert_eq!(bar.bar_height(METRICS), 26.0, "rounded from 25.6");
+        bar.set_height_ratio(Some(0.5));
+        assert_eq!(bar.bar_height(METRICS), 16.0, "at least a cell");
     }
 
     #[test]
@@ -1293,6 +1341,7 @@ mod tests {
         let layout = TitleBarLayout::new(
             WINDOW,
             METRICS,
+            None,
             1.0,
             true,
             &menu_widths(),
@@ -1319,6 +1368,7 @@ mod tests {
         let layout = TitleBarLayout::new(
             narrow,
             METRICS,
+            None,
             1.0,
             false,
             &menu_widths(),
@@ -1336,6 +1386,7 @@ mod tests {
         bar.layout = Some(TitleBarLayout::new(
             WINDOW,
             METRICS,
+            None,
             1.0,
             false,
             &menu_widths(),
@@ -1581,6 +1632,7 @@ mod tests {
         let layout = TitleBarLayout::new(
             WINDOW,
             METRICS,
+            None,
             1.0,
             true,
             &[],
@@ -1602,6 +1654,7 @@ mod tests {
         let right = TitleBarLayout::new(
             WINDOW,
             METRICS,
+            None,
             1.0,
             true,
             &[],
@@ -1621,6 +1674,7 @@ mod tests {
         let layout = TitleBarLayout::new(
             narrow,
             METRICS,
+            None,
             1.0,
             false,
             &[],
