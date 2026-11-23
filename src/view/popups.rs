@@ -1303,8 +1303,10 @@ impl<A: 'static> Spec<A> for Toasts<'_, A> {
         true
     }
 
+    /// Only while a toast waits to expire: a ticking layer has misty build
+    /// the whole view on every wake-up.
     fn is_ticking(&self) -> bool {
-        true
+        self.notifier.toasts().next_expiry().is_some()
     }
 
     /// The call expiring the toasts whose time is up, or when the next one
@@ -1576,5 +1578,30 @@ fn choice<'a, A>(label: &'a str, apply: impl Fn(&mut A) + 'static, primary: bool
         on_click: Rc::new(move |app: &mut A, ()| apply(app)),
         primary,
         shortcut: None,
+    }
+}
+
+// ========================================================================
+// Tests
+// ========================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::super::super::base::notice::Notice;
+    use super::*;
+
+    struct App {
+        notifier: Notifier,
+    }
+
+    #[test]
+    fn test_the_toast_layer_ticks_only_while_a_toast_waits_to_expire() {
+        let ticking = |notifier: &Notifier| {
+            Spec::<App>::is_ticking(&toasts(notifier, |app: &mut App| &mut app.notifier))
+        };
+        let mut notifier = Notifier::new();
+        assert!(!ticking(&notifier), "no toast, nothing to step");
+        notifier.notify(Notice::info("copied"));
+        assert!(ticking(&notifier), "a toast to expire");
     }
 }
