@@ -364,6 +364,7 @@ impl InputReader {
     /// Updates what lasts between events with `input`, an input made
     /// without a window system (by a test) on a display at scale factor 1,
     /// as reading its event would now.
+    #[cfg(any(test, feature = "testing"))]
     pub(crate) fn follow(&mut self, input: &Input) {
         self.follow_at(input, clock::now(), 1.0);
     }
