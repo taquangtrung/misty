@@ -12,7 +12,7 @@ use std::rc::Rc;
 use super::super::base::geometry::{Point, Rect};
 use super::super::base::key::Mods;
 use super::super::base::split::Axis;
-use super::super::base::styled::{Span, StyledText, TextColor};
+use super::super::base::styled::{Span, StyledText, TextColor, TextSize};
 use super::super::base::theme::{Emphasis, ThemeToken};
 use super::super::input::event::WheelInput;
 use super::super::render::layout::{Align, Justify};
@@ -164,6 +164,8 @@ pub struct Text<'a> {
     /// Whether it is set in the proportional font rather than on the cell
     /// grid.
     pub(crate) proportional: bool,
+    /// Optional font-size multiplier relative to the theme's UI font.
+    pub(crate) scale: Option<f32>,
     /// The runs of text, each in its color, in order.
     pub(crate) spans: Vec<(Cow<'a, str>, TextColor)>,
 }
@@ -774,16 +776,27 @@ impl<'a> Text<'a> {
         }
     }
 
+    /// Scale this text's font size by `factor` relative to the theme's UI font.
+    pub fn scale(self, factor: f32) -> Self {
+        Self {
+            scale: Some(factor),
+            ..self
+        }
+    }
+
     /// The text as misty draws it, cut with an ellipsis.
     pub(crate) fn styled(&self, emphasis: Emphasis) -> StyledText {
         self.spans
             .iter()
             .fold(StyledText::new(), |styled, (text, color)| {
-                let span = Span::new(text.as_ref(), *color);
-                styled.with(match self.emphasized {
-                    true => span.emphasized(emphasis),
-                    false => span,
-                })
+                let mut span = Span::new(text.as_ref(), *color);
+                if self.emphasized {
+                    span = span.emphasized(emphasis);
+                }
+                if let Some(factor) = self.scale {
+                    span = span.size(TextSize::Scale(factor));
+                }
+                styled.with(span)
             })
             .with_ellipsis()
     }
@@ -856,6 +869,7 @@ pub fn text<'a>(text: impl Into<Cow<'a, str>>) -> Text<'a> {
     Text {
         emphasized: false,
         proportional: false,
+        scale: None,
         spans: vec![(text.into(), ThemeToken::Foreground.into())],
     }
 }

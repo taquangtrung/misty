@@ -123,8 +123,8 @@ pub use element::{Field, MenuRequest, Overlay, Text, column, field, form, overla
 pub use embed::{HostedView, ScrollStep, ViewHost};
 pub use fields::{ColorField, KeyCapture, NamesField, color_field, key_capture, names_field};
 pub use page::{
-    Item, Page, Section, badge, divider, grid, item, keycap, page, proportional_keycap, section,
-    sidebar, vertical_divider,
+    Item, Page, Section, SectionHeader, badge, divider, grid, item, keycap, page,
+    proportional_keycap, section, section_header, sidebar, vertical_divider,
 };
 pub use pick::{QuickPick, quick_pick};
 pub use popups::{

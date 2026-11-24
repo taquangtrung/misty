@@ -17,10 +17,11 @@
 use super::super::app::context::EventCx;
 use super::super::app::frame::Frame;
 use super::super::app::widget::{Outcome, Widget};
+use super::super::base::color::Rgb;
 use super::super::base::geometry::{Point, Rect};
 use super::super::base::list::scroll_to_show;
 use super::super::base::text;
-use super::super::base::theme::Theme;
+use super::super::base::theme::{Shape, Theme};
 use super::super::input::event::{Input, PointerButton};
 use super::popup::{Popup, PopupSide};
 
@@ -46,6 +47,20 @@ const DETAIL_GAP: usize = 2;
 
 /// The most cells a source shows.
 const MAX_SOURCE_CELLS: usize = 12;
+
+/// Maximum corner radius of the completion popup, in logical pixels.
+const POPUP_CORNER_RADIUS: u16 = 2;
+
+/// Maximum vertical padding above and below each row, in logical pixels.
+const ROW_PADDING: u16 = 2;
+
+/// Share of the foreground mixed into the popup background for the selected
+/// row's neutral highlight.
+const SELECTED_FILL_SHARE: f32 = 0.12;
+
+/// Share of the foreground mixed into the popup background for a hovered
+/// row's subtle highlight.
+const HOVER_FILL_SHARE: f32 = 0.06;
 
 // ========================================================================
 // Data Structures
@@ -221,61 +236,82 @@ impl Widget for CompletionList {
         }
         let metrics = frame.cell_metrics();
         let scale_factor = frame.scale_factor();
-        let inset = Popup::inset(&theme.shape, scale_factor);
-        // Half the shape's row padding: a completion list's rows are dense.
-        let pad = (f32::from(theme.shape.row_padding) * scale_factor as f32 / 2.0).round();
-        let row_height = metrics.height + 2.0 * pad;
-        let width = self.width_cells() as f32 * metrics.width + 2.0 * inset;
+        let shape = popup_shape(theme);
+        let inset = Popup::inset(&shape, scale_factor);
+        let pad_x = metrics.width.round();
+        let pad_y = (f32::from(shape.row_padding) * scale_factor as f32).round();
+        let row_height = metrics.height + 2.0 * pad_y;
+        let width = self.width_cells() as f32 * metrics.width + 2.0 * (pad_x + inset);
         let height = visible.len() as f32 * row_height + 2.0 * inset;
         let popup = Popup::new(self.anchor, width, height, PopupSide::Below, area);
-        let style = theme
-            .shape
-            .floating_box(theme.raised, theme.border, frame.scale_factor());
+        let style = shape.floating_box(theme.raised, theme.border, scale_factor);
         frame.overlay(|frame| frame.draw_box(popup.rect(), &style));
-        let content = popup.content(&theme.shape, frame.scale_factor());
+        let content = popup.content(&shape, scale_factor);
         self.drawn = Some((content, visible.start));
         let source_cells = self.source_cells();
         let label_cells = self.width_cells() - KIND_CELLS - source_cells;
         for (row, index) in visible.enumerate() {
             let item = &self.items[index];
             let row_top = content.y + row as f32 * row_height;
-            let top = row_top + pad;
-            let band = match (self.selected == Some(index), self.hovered == Some(index)) {
-                (true, _) => Some(theme.selected_row),
-                (false, true) => Some(theme.hover),
-                (false, false) => None,
-            };
+            let top = row_top + pad_y;
+            let text_left = content.x + pad_x;
+            let is_selected = self.selected == Some(index);
+            let is_hovered = !is_selected && self.hovered == Some(index);
             frame.overlay(|frame| {
-                if let Some(band) = band {
-                    let row = Rect::new(content.x, row_top, content.width, row_height);
-                    frame.draw_box(
-                        theme.shape.highlight_band(row, scale_factor),
-                        &theme.shape.highlight(band, scale_factor),
-                    );
+                let row_rect = Rect::new(content.x, row_top, content.width, row_height);
+                if is_selected {
+                    frame.fill_rect(row_rect, selected_row_fill(theme));
+                } else if is_hovered {
+                    frame.fill_rect(row_rect, hovered_row_fill(theme));
                 }
                 if let Some(kind) = item.kind {
-                    let at = Point::new(content.x, top);
+                    let at = Point::new(text_left, top);
                     frame.draw_plain_text(&kind.to_string(), at, theme.accent);
                 }
                 let label = text::fit(&item.label, MAX_LABEL_CELLS);
-                let at = Point::new(content.x + KIND_CELLS as f32 * metrics.width, top);
+                let at = Point::new(text_left + KIND_CELLS as f32 * metrics.width, top);
                 frame.draw_plain_text(&label, at, theme.foreground);
                 if let Some(detail) = &item.detail {
                     let detail = text::fit(detail, MAX_DETAIL_CELLS);
                     let cells = text::width(&detail);
                     let right = KIND_CELLS + label_cells;
-                    let at = Point::new(content.x + (right - cells) as f32 * metrics.width, top);
+                    let at = Point::new(text_left + (right - cells) as f32 * metrics.width, top);
                     frame.draw_plain_text(&detail, at, theme.muted);
                 }
                 if let Some(source) = &item.source {
                     let source = text::fit(source, MAX_SOURCE_CELLS);
                     let left = KIND_CELLS + label_cells + DETAIL_GAP;
-                    let at = Point::new(content.x + left as f32 * metrics.width, top);
+                    let at = Point::new(text_left + left as f32 * metrics.width, top);
                     frame.draw_plain_text(&source, at, theme.muted);
                 }
             });
         }
     }
+}
+
+// ========================================================================
+// Functions
+// ========================================================================
+
+/// Crisp popup shape derived from `theme`: tighter corners, compact rows, and
+/// full-width row bands while preserving square grid themes.
+fn popup_shape(theme: &Theme) -> Shape {
+    Shape {
+        corner_radius: theme.shape.corner_radius.min(POPUP_CORNER_RADIUS),
+        highlight_inset: 0,
+        row_padding: theme.shape.row_padding.min(ROW_PADDING),
+        ..theme.shape
+    }
+}
+
+/// Neutral elevated fill for the selected completion row.
+fn selected_row_fill(theme: &Theme) -> Rgb {
+    theme.raised.mix(theme.foreground, SELECTED_FILL_SHARE)
+}
+
+/// Subtle neutral fill for a hovered completion row.
+fn hovered_row_fill(theme: &Theme) -> Rgb {
+    theme.raised.mix(theme.foreground, HOVER_FILL_SHARE)
 }
 
 // ========================================================================
@@ -386,16 +422,14 @@ mod tests {
         assert_eq!(first, 0);
         assert!(content.y >= 26.0, "under the anchor: {content:?}");
         let metrics = snapshot.metrics();
-        // Inside the second row's highlight: its middle, clear of the rounded
-        // corners, and above its text.
-        // A row is a line plus half the row padding above and below.
-        let row_height = metrics.height + f32::from(theme.shape.row_padding);
-        let second = content.y + row_height + 3.0;
+        let shape = popup_shape(&theme);
+        let row_height = metrics.height + 2.0 * f32::from(shape.row_padding);
+        let second = content.y + row_height + 2.0;
         snapshot.assert_pixel(
             content.x + content.width / 2.0,
             second,
-            theme.selection,
-            "lit",
+            selected_row_fill(&theme),
+            "lit with neutral fill",
         );
         snapshot.assert_pixel(
             content.x + content.width - 1.0,
