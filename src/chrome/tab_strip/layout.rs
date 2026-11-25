@@ -542,7 +542,8 @@ impl TabSizes {
 // ========================================================================
 
 /// Each tab's width across `viewport`: never less than its title needs or
-/// `options.min_width`, nor more than the widest a tab is drawn.
+/// `options.min_width`, nor more than the widest a tab is drawn; with
+/// [`TabWidth::Equal`], the widest of those for every tab.
 fn tab_widths(
     tabs: &[Tab],
     title_widths: &[f32],
@@ -556,14 +557,17 @@ fn tab_widths(
     // held still and then jumped a pixel per tab before them.
     let share = match options.width {
         TabWidth::Fill if !tabs.is_empty() => viewport / tabs.len() as f32,
-        TabWidth::Fill | TabWidth::Fit | TabWidth::Icon => 0.0,
+        TabWidth::Equal | TabWidth::Fill | TabWidth::Fit | TabWidth::Icon => 0.0,
     };
     // A square stays one, whatever the least width.
     let min_width = match options.width {
         TabWidth::Icon => 0.0,
-        TabWidth::Fill | TabWidth::Fit => (options.min_width * scale_factor as f32).round(),
+        TabWidth::Equal | TabWidth::Fill | TabWidth::Fit => {
+            (options.min_width * scale_factor as f32).round()
+        }
     };
-    tabs.iter()
+    let widths: Vec<f32> = tabs
+        .iter()
         .zip(title_widths)
         .map(|(tab, &title)| {
             let marks = sizes.marks(tab);
@@ -571,7 +575,14 @@ fn tab_widths(
             let widest = sizes.tab_width(f32::INFINITY, marks);
             fit.max(share.min(widest))
         })
-        .collect()
+        .collect();
+    match options.width {
+        TabWidth::Equal => {
+            let widest = widths.iter().copied().fold(0.0, f32::max);
+            vec![widest; widths.len()]
+        }
+        TabWidth::Fill | TabWidth::Fit | TabWidth::Icon => widths,
+    }
 }
 
 /// The smallest index from which every tab of `widths` fits in `viewport`
@@ -712,6 +723,26 @@ mod tests {
             [99.0, 99.0, 99.0, 71.0],
             "never narrower than its title needs; the remaining two scroll, part of the first showing"
         );
+    }
+
+    #[test]
+    fn test_equal_tabs_all_take_the_widest_title_s_width_up_to_the_longest_a_title_gets() {
+        let equal = TabOptions {
+            width: TabWidth::Equal,
+            ..options()
+        };
+        let widths = |tabs: &[Tab]| -> Vec<f32> {
+            let layout = layout_with(equal, 2000.0, tabs);
+            layout.slots.iter().map(|slot| slot.body.width).collect()
+        };
+        assert_eq!(widths(&tabs(&[1, 10, 6])), [139.0, 139.0, 139.0]);
+        assert_eq!(widths(&tabs(&[1, 50])), [239.0, 239.0], "cut at 20 cells");
+        let mut marked = tabs(&[10, 10]);
+        marked[0].icon = Some("file".into());
+        let layout = layout_with(equal, 2000.0, &marked);
+        let [icon, plain] = [0, 1].map(|index| &layout.slots[index]);
+        assert_eq!(icon.body.width, plain.body.width, "an icon widens them all");
+        assert!(plain.title_room > icon.title_room);
     }
 
     #[test]

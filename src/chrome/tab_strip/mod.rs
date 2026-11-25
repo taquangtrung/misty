@@ -243,6 +243,9 @@ pub enum TabWidth {
     /// The strip's width shared among them, each at least as wide as its
     /// title and at most the longest a title gets; a lone tab is wide.
     Fill,
+    /// All as wide as the widest of them fits its title, within the same
+    /// bounds as [`TabWidth::Fit`], so no tab stands out by its width.
+    Equal,
     /// Each a square as tall as the strip showing only its icon, its title
     /// left to a tooltip ([`TabStrip::title_cut`] holds for it) and to
     /// screen readers: for a strip whose tabs all have icons.
