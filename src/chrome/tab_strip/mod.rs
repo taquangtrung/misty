@@ -29,8 +29,9 @@
 //! ([`TabStrip::set_icon`]), a spinner in the icon's place while its work
 //! is under way ([`TabStrip::set_busy`]; call [`TabStrip::about_to_wait`]
 //! so it turns), and a dot in place of its close button while it holds
-//! unsaved changes ([`TabStrip::set_modified`]); the pointer over the tab
-//! brings the close button back.
+//! unsaved changes ([`TabStrip::set_modified`]), or one in the accent
+//! color while it waits on the user ([`TabStrip::set_attention`]); the
+//! pointer over the tab brings the close button back.
 //!
 //! A strip in a pane that does not have the focus, as one of several
 //! editor groups, says so with [`TabStrip::set_focused`]: its active tab
@@ -118,7 +119,8 @@ const SEPARATOR_SHARE: f32 = 0.18;
 /// below rather than boxed.
 const ACTIVE_EDGE_SHARE: f32 = 0.2;
 
-/// The modified dot's side as a share of the close button's.
+/// The side of the dot marking a modified or waiting tab, as a share of
+/// the close button's.
 const MODIFIED_DOT_SHARE: f32 = 0.4;
 
 /// The child index of the new-tab button's accessibility node; each tab's
@@ -250,6 +252,8 @@ pub enum TabWidth {
 /// One tab: its id, the title it shows, and its marks.
 #[derive(Clone, Debug, PartialEq)]
 struct Tab {
+    /// Whether it waits on the user, which shows an accent dot.
+    attention: bool,
     /// Whether its work is under way, which shows a spinner.
     busy: bool,
     /// Whether it can be closed from the strip: its close button and a
@@ -619,6 +623,13 @@ impl TabStrip {
         self.update_tab(id, |tab| tab.modified = modified)
     }
 
+    /// Marks tab `id` as waiting on the user or not, as a program asking
+    /// for input: a dot in the accent color stands in for its close button,
+    /// over a modified dot. `false` when no tab has that id.
+    pub fn set_attention(&mut self, id: TabId, attention: bool) -> bool {
+        self.update_tab(id, |tab| tab.attention = attention)
+    }
+
     /// Says whether the strip's window has the focus: while it does not,
     /// the active tab's accent line is dimmed. Ask for a redraw after.
     pub fn set_window_active(&mut self, active: bool) {
@@ -872,7 +883,12 @@ impl TabStrip {
         if self.options.close == TabClose::Never {
             return;
         }
-        if tab.modified && !is_hovered {
+        let dot_color = match (tab.attention, tab.modified) {
+            (true, _) => Some(theme.accent),
+            (false, true) => Some(text_color),
+            (false, false) => None,
+        };
+        if let (Some(color), false) = (dot_color, is_hovered) {
             let side = (slot.close.width * MODIFIED_DOT_SHARE).round().max(1.0);
             let dot = Rect::new(
                 (slot.close.x + (slot.close.width - side) / 2.0).round(),
@@ -883,7 +899,7 @@ impl TabStrip {
             let style = BoxStyle {
                 border: None,
                 corner_radius: side / 2.0,
-                fill: Rgba::from(text_color),
+                fill: Rgba::from(color),
                 shadow: None,
             };
             frame.draw_box(dot, &style);
@@ -1615,6 +1631,7 @@ impl Tab {
     /// Tab `id` titled `title`, with no marks.
     fn new(id: TabId, title: String) -> Self {
         Self {
+            attention: false,
             busy: false,
             closable: true,
             icon: None,
@@ -2106,6 +2123,24 @@ mod tests {
         hovered.assert_pixel(x, y, theme.hover, "the close button in the dot's place");
         assert!(strip.set_modified(b, false));
         assert!(!strip.set_modified(TabId(99), true), "no such tab");
+    }
+
+    #[test]
+    fn test_a_waiting_tab_shows_an_accent_dot_over_its_modified_one() {
+        let theme = Theme::dark();
+        let (mut strip, [a, _, _]) = strip();
+        strip.set_modified(a, true);
+        assert!(strip.set_attention(a, true));
+        let area = Rect::new(0.0, 0.0, 480.0, 80.0);
+        let Some(dotted) = offscreen::render(480, 80, |frame| {
+            strip.draw(frame, area, &theme);
+        }) else {
+            return;
+        };
+        let close = strip.layout.as_ref().expect("drawn").slots[0].close;
+        let (x, y) = (close.x + close.width / 2.0 + 2.0, close.y + close.height / 2.0);
+        dotted.assert_pixel(x, y, theme.accent, "the accent dot");
+        assert!(!strip.set_attention(TabId(99), true), "no such tab");
     }
 
     #[test]
