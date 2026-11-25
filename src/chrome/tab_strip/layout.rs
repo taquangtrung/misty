@@ -1,5 +1,5 @@
 //! Where the parts of a tab strip are, as plain geometry: which tabs fit,
-//! each tab's body, icon, and close button, the new-tab button, and what a point
+//! each tab's body, icon, mark, and close button, the new-tab button, and what a point
 //! hits. No drawing happens here, so the layout can be tested alone and the
 //! drawing and the hit testing always agree.
 
@@ -113,20 +113,35 @@ pub(crate) struct TabSlot {
     pub(crate) body: Rect,
     /// The close button inside the tab, at its right.
     pub(crate) close: Rect,
+    /// Where the spinner or a dot goes, at the tab's right: the close
+    /// button's square, or one made for the spinner in a strip without
+    /// close buttons; empty in a tab with neither.
+    pub(crate) mark: Rect,
     /// The tab's index among all tabs.
     pub(crate) index: usize,
     /// Whether only part of the tab shows, at an end of an overflowing
     /// strip: `body` is the part shown, its start, while the title, icon,
     /// and close button keep their places in the whole tab, cut to `body`.
     pub(crate) peek: bool,
-    /// Where the icon or the spinner goes, a square before the title, or
-    /// `None` for a tab showing neither.
+    /// Where the icon goes, a square before the title (the spinner's too,
+    /// in a strip of icons alone), or `None` for a tab showing neither.
     pub(crate) lead: Option<Rect>,
     /// How wide the title may be drawn before it is cut, in pixels: the
     /// room the tab was sized for, less what cutting it to the strip took.
     pub(crate) title_room: f32,
     /// Where the title text starts.
     pub(crate) title_origin: Point,
+}
+
+/// What a tab shows beside its title, which its width makes room for.
+#[derive(Clone, Copy, Debug, Default)]
+struct Marks {
+    /// Whether an icon (or, in a strip of icons alone, a spinner) goes
+    /// before the title.
+    lead: bool,
+    /// Whether a spinner goes after the title in a strip without close
+    /// buttons, which leaves no room there otherwise.
+    trail: bool,
 }
 
 /// The sizes every tab shares, in physical pixels.
@@ -136,6 +151,9 @@ struct TabSizes {
     button: f32,
     /// The close button's side.
     close: f32,
+    /// The side of the square a spinner takes after the title in a strip
+    /// without close buttons.
+    mark: f32,
     /// One cell's width.
     cell: f32,
     /// The icon's side.
@@ -192,7 +210,7 @@ impl TabStripLayout {
         let step_buttons = BOTH_STEP_BUTTONS as f32 * button_width;
         // Part of a tab shows at each end only where a whole tab still fits
         // between the two.
-        let narrowest = sizes.tab_width(0.0, false);
+        let narrowest = sizes.tab_width(0.0, Marks::default());
         let min_peek = (MIN_PEEK_WIDTH * scale_factor as f32).round();
         let left_peek = (narrowest * LEFT_PEEK_SHARE).round().max(min_peek);
         let right_peek = (narrowest * PEEK_SHARE).round().max(min_peek);
@@ -269,7 +287,7 @@ impl TabStripLayout {
                 x,
                 bar.y,
                 widths[index],
-                tabs[index].has_lead(),
+                sizes.marks(&tabs[index]),
                 shown,
             ));
         }
@@ -287,8 +305,8 @@ impl TabStripLayout {
                 false => break,
             };
             let (left, right) = (x.round(), (x + shown_width).round());
-            let has_lead = tabs[index].has_lead();
-            slots.push(sizes.slot(index, left, bar.y, right - left, has_lead));
+            let marks = sizes.marks(&tabs[index]);
+            slots.push(sizes.slot(index, left, bar.y, right - left, marks));
             x += shown_width;
             next = index + 1;
         }
@@ -303,7 +321,7 @@ impl TabStripLayout {
                 left,
                 bar.y,
                 widths[next],
-                tabs[next].has_lead(),
+                sizes.marks(&tabs[next]),
                 shown,
             ));
             x = tabs_x + viewport;
@@ -380,13 +398,15 @@ impl TabSizes {
         let ratio = height_ratio.unwrap_or(STRIP_HEIGHT_RATIO);
         let height = (metrics.height * ratio).round();
         let button = (metrics.height * BUTTON_RATIO).round();
+        let mark = (button * CLOSE_SHARE).round();
         let close = match close {
-            TabClose::ActiveOrHovered | TabClose::Hovered => (button * CLOSE_SHARE).round(),
+            TabClose::ActiveOrHovered | TabClose::Hovered => mark,
             TabClose::Never => 0.0,
         };
         Self {
             button,
             close,
+            mark,
             cell: metrics.width,
             icon: (metrics.height * ICON_SHARE).round(),
             icon_only: false,
@@ -396,9 +416,24 @@ impl TabSizes {
         }
     }
 
-    /// The width of a tab whose title is `title` pixels wide, with an icon
-    /// or spinner before it when `has_lead`.
-    fn tab_width(&self, title: f32, has_lead: bool) -> f32 {
+    /// What `tab` shows beside its title in this strip: its spinner goes in
+    /// the icon's place only in a strip of icons alone.
+    fn marks(&self, tab: &Tab) -> Marks {
+        match self.icon_only {
+            true => Marks {
+                lead: tab.busy || tab.icon.is_some(),
+                trail: false,
+            },
+            false => Marks {
+                lead: tab.icon.is_some(),
+                trail: tab.busy && self.close == 0.0,
+            },
+        }
+    }
+
+    /// The width of a tab whose title is `title` pixels wide, with `marks`
+    /// beside it.
+    fn tab_width(&self, title: f32, marks: Marks) -> f32 {
         if self.icon_only {
             return self.height;
         }
@@ -406,40 +441,56 @@ impl TabSizes {
             MIN_TITLE_CELLS as f32 * self.cell,
             MAX_TITLE_CELLS as f32 * self.cell,
         );
-        let lead = self.lead_width(has_lead);
-        (2.0 * self.padding + lead + room + self.close).round()
+        let lead = self.lead_width(marks);
+        (2.0 * self.padding + lead + room + self.trail_width(marks)).round()
     }
 
-    /// The width the icon or spinner takes before the title, its gap
-    /// included, when `has_lead`.
-    fn lead_width(&self, has_lead: bool) -> f32 {
-        match has_lead {
+    /// The width the icon takes before the title, its gap included.
+    fn lead_width(&self, marks: Marks) -> f32 {
+        match marks.lead {
             true => LEAD_CELLS as f32 * self.cell,
             false => 0.0,
         }
     }
 
-    /// The slot of the tab at `index`, `width` wide from `x`, `y`, with an
-    /// icon or spinner before the title when `has_lead`.
-    fn slot(&self, index: usize, x: f32, y: f32, width: f32, has_lead: bool) -> TabSlot {
+    /// The side of the square after the title: the close button's, else
+    /// the spinner's where `marks` has one there.
+    fn trail_width(&self, marks: Marks) -> f32 {
+        match marks.trail {
+            true => self.mark,
+            false => self.close,
+        }
+    }
+
+    /// The slot of the tab at `index`, `width` wide from `x`, `y`, with
+    /// `marks` beside its title.
+    fn slot(&self, index: usize, x: f32, y: f32, width: f32, marks: Marks) -> TabSlot {
         if self.icon_only {
-            return self.icon_slot(index, x, y, width, has_lead);
+            return self.icon_slot(index, x, y, width, marks.lead);
         }
         let inset = (self.padding / 2.0).round();
         let close_x = x + width - inset - self.close;
         let close_y = y + ((self.height - self.close) / 2.0).round();
-        let lead_width = self.lead_width(has_lead);
-        let lead = has_lead.then(|| {
+        let trail = self.trail_width(marks);
+        let mark = Rect::new(
+            x + width - inset - trail,
+            y + ((self.height - trail) / 2.0).round(),
+            trail,
+            trail,
+        );
+        let lead_width = self.lead_width(marks);
+        let lead = marks.lead.then(|| {
             let icon_y = y + ((self.height - self.icon) / 2.0).round();
             Rect::new(x + self.padding, icon_y, self.icon, self.icon)
         });
         let title_x = x + self.padding + lead_width;
         // The half pixel gives back what rounding the tab's width took.
-        let free = width - 2.0 * self.padding - lead_width - self.close + ROUNDING_SLACK;
+        let free = width - 2.0 * self.padding - lead_width - trail + ROUNDING_SLACK;
         TabSlot {
             body: Rect::new(x, y, width, self.height),
             close: Rect::new(close_x, close_y, self.close, self.close),
             index,
+            mark,
             lead,
             peek: false,
             title_room: free.max(0.0),
@@ -449,7 +500,7 @@ impl TabSizes {
 
     /// The slot of the tab at `index`, a square `width` wide from `x`, `y`,
     /// its icon or spinner centered when `has_lead`, with no room for a
-    /// title or a close button.
+    /// title, a mark, or a close button.
     fn icon_slot(&self, index: usize, x: f32, y: f32, width: f32, has_lead: bool) -> TabSlot {
         let icon_x = x + ((width - self.icon) / 2.0).round();
         let icon_y = y + ((self.height - self.icon) / 2.0).round();
@@ -458,6 +509,7 @@ impl TabSizes {
             body: Rect::new(x, y, width, self.height),
             close: Rect::new(middle.x, middle.y, 0.0, 0.0),
             index,
+            mark: Rect::new(middle.x, middle.y, 0.0, 0.0),
             lead: has_lead.then(|| Rect::new(icon_x, icon_y, self.icon, self.icon)),
             peek: false,
             title_room: 0.0,
@@ -466,21 +518,21 @@ impl TabSizes {
     }
 
     /// The slot of the tab at `index`, laid out whole `width` wide from
-    /// `x`, `y`, with an icon or spinner before the title when `has_lead`,
-    /// of which only `shown` shows.
+    /// `x`, `y`, with `marks` beside its title, of which only `shown`
+    /// shows.
     fn peek(
         &self,
         index: usize,
         x: f32,
         y: f32,
         width: f32,
-        has_lead: bool,
+        marks: Marks,
         shown: Rect,
     ) -> TabSlot {
         TabSlot {
             body: shown,
             peek: true,
-            ..self.slot(index, x, y, width.round(), has_lead)
+            ..self.slot(index, x, y, width.round(), marks)
         }
     }
 }
@@ -514,8 +566,9 @@ fn tab_widths(
     tabs.iter()
         .zip(title_widths)
         .map(|(tab, &title)| {
-            let fit = sizes.tab_width(title, tab.has_lead()).max(min_width);
-            let widest = sizes.tab_width(f32::INFINITY, tab.has_lead());
+            let marks = sizes.marks(tab);
+            let fit = sizes.tab_width(title, marks).max(min_width);
+            let widest = sizes.tab_width(f32::INFINITY, marks);
             fit.max(share.min(widest))
         })
         .collect()
@@ -701,6 +754,17 @@ mod tests {
         assert_eq!(slot.body.width, 80.0, "padding 2 * 10 and 6 cells of title");
         let corner = Point::new(slot.body.x + slot.body.width - 6.0, 16.0);
         assert_eq!(layout.hit(corner, &tabs), Some(TabStripHit::Tab(TabId(0))));
+        // A busy tab makes room after its title for the spinner, still no
+        // close button to hit.
+        let mut busy = tabs.clone();
+        busy[0].busy = true;
+        let layout = layout_with(never, 800.0, &busy);
+        let slot = &layout.slots[0];
+        assert_eq!(slot.body.width, 99.0, "and the spinner's 19");
+        assert_eq!(slot.mark.width, 19.0);
+        assert!(slot.title_origin.x + slot.title_room <= slot.mark.x);
+        let corner = Point::new(slot.mark.x + 2.0, 16.0);
+        assert_eq!(layout.hit(corner, &busy), Some(TabStripHit::Tab(TabId(0))));
     }
 
     #[test]
@@ -955,18 +1019,18 @@ mod tests {
     }
 
     #[test]
-    fn test_an_icon_or_a_spinner_widens_the_tab_and_moves_its_title_right() {
+    fn test_an_icon_widens_the_tab_and_moves_its_title_right_and_a_spinner_goes_right() {
         let mut tabs = tabs(&[10, 10, 10]);
         tabs[1].icon = Some("file".into());
+        tabs[2].icon = Some("file".into());
         tabs[2].busy = true;
         let layout = layout(2000.0, &tabs, 0, None);
         let [plain, icon, busy] = [0, 1, 2].map(|index| &layout.slots[index]);
         assert_eq!(plain.lead, None);
         assert_eq!(icon.body.width, plain.body.width + 20.0, "two cells more");
-        assert_eq!(
-            busy.body.width, icon.body.width,
-            "the spinner takes the icon's place"
-        );
+        assert_eq!(busy.body.width, icon.body.width, "the icon stays");
+        assert!(busy.lead.is_some());
+        assert_eq!(busy.mark, busy.close, "the spinner in the close button's place");
         let lead = icon.lead.expect("an icon square");
         // The 15 pixel icon (0.75 of 20) sits after the padding, centered.
         assert_eq!(lead, Rect::new(icon.body.x + 10.0, 9.0, 15.0, 15.0));

@@ -26,10 +26,10 @@
 //! [`DropZone::rect`](crate::DropZone::rect) shows it.
 //!
 //! A tab may show an icon from the app's [`IconSet`] before its title
-//! ([`TabStrip::set_icon`]), a spinner in the icon's place while its work
-//! is under way ([`TabStrip::set_busy`]; call [`TabStrip::about_to_wait`]
-//! so it turns), and a dot in place of its close button while it holds
-//! unsaved changes ([`TabStrip::set_modified`]), or one in the accent
+//! ([`TabStrip::set_icon`]), a spinner in place of its close button while
+//! its work is under way ([`TabStrip::set_busy`]; call
+//! [`TabStrip::about_to_wait`] so it turns; in a strip of icons alone it
+//! takes the icon's place), and a dot there while it holds unsaved changes ([`TabStrip::set_modified`]), or one in the accent
 //! color while it waits on the user ([`TabStrip::set_attention`]); the
 //! pointer over the tab brings the close button back.
 //!
@@ -644,7 +644,8 @@ impl TabStrip {
         self.accent_overhang = overhang.max(0.0);
     }
 
-    /// Marks tab `id` as busy, with a spinner in its icon's place, or not;
+    /// Marks tab `id` as busy, with a spinner in place of its close button
+    /// (its icon's, in a strip of icons alone), or not;
     /// `false` when no tab has that id. Ask for a redraw after.
     pub fn set_busy(&mut self, id: TabId, busy: bool) -> bool {
         let found = self.update_tab(id, |tab| tab.busy = busy);
@@ -868,6 +869,7 @@ impl TabStrip {
         if let Some(lead) = slot.lead {
             self.draw_lead(frame, tab, lead, slot.title_origin.y, text_color);
         }
+        let icon_only = self.options.width == TabWidth::Icon;
         // The layout sized the tab for its title as measured below; the
         // label is cut only when that room ran out.
         let clip = Rect::new(
@@ -878,9 +880,15 @@ impl TabStrip {
         );
         let title = title_label(tab, text_color);
         draw_styled_label(frame, theme, &title, slot.title_origin, clip);
+        // The pointer over a tab brings its close button back over the
+        // spinner, where the strip shows close buttons.
+        let can_close = self.options.close != TabClose::Never;
+        if tab.busy && !icon_only && !(is_hovered && can_close) {
+            return self.draw_spinner(frame, slot.mark, slot.title_origin.y, text_color);
+        }
         // A strip that shows no close buttons made no room for one, nor
         // for the dot that stands in for it.
-        if self.options.close == TabClose::Never {
+        if !can_close {
             return;
         }
         let dot_color = match (tab.attention, tab.modified) {
@@ -984,21 +992,30 @@ impl TabStrip {
         self.active_edges || (self.active_radius > 0.0 && !self.borderless)
     }
 
-    /// Draws `tab`'s spinner while it is busy, else its icon, in `lead`;
-    /// the spinner's glyph sits on the title's line, which starts at `top`.
+    /// Draws `tab`'s icon in `lead`, or its spinner while it is busy in a
+    /// strip of icons alone, which has no other room for it.
     fn draw_lead(&self, frame: &mut Frame, tab: &Tab, lead: Rect, top: f32, color: Rgb) {
-        if let (true, Some(epoch)) = (tab.busy, self.spinner_epoch) {
-            let now = match frame.reduced_motion() {
-                true => epoch,
-                false => Instant::now(),
-            };
-            let glyph = spinner::glyph_at(epoch, now).to_string();
-            frame.draw_plain_text(&glyph, Point::new(lead.x, top), color);
-            return;
+        if tab.busy && self.options.width == TabWidth::Icon {
+            return self.draw_spinner(frame, lead, top, color);
         }
         if let Some(name) = tab.icon.as_deref() {
             frame.draw_named_icon(&self.icons, name, lead, color);
         }
+    }
+
+    /// Draws the spinner's glyph centered across `square`, on the title's
+    /// line, which starts at `top`.
+    fn draw_spinner(&self, frame: &mut Frame, square: Rect, top: f32, color: Rgb) {
+        let Some(epoch) = self.spinner_epoch else {
+            return;
+        };
+        let now = match frame.reduced_motion() {
+            true => epoch,
+            false => Instant::now(),
+        };
+        let glyph = spinner::glyph_at(epoch, now).to_string();
+        let x = (square.x + (square.width - frame.cell_metrics().width) / 2.0).round();
+        frame.draw_plain_text(&glyph, Point::new(x, top), color);
     }
 
     /// Draws the strip's action buttons: prev/next when overflowing, then new-tab.
@@ -1639,11 +1656,6 @@ impl Tab {
             modified: false,
             title,
         }
-    }
-
-    /// Whether the tab shows an icon or a spinner before its title.
-    fn has_lead(&self) -> bool {
-        self.busy || self.icon.is_some()
     }
 }
 
