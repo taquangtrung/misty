@@ -29,6 +29,10 @@ use super::popup::{Popup, PopupSide};
 // Constants
 // ========================================================================
 
+/// The fewest cells wide the popup is drawn, so short matches sit in a
+/// readable box.
+const MIN_WIDTH_CELLS: usize = 28;
+
 /// The most rows shown at once; more scroll.
 const MAX_ROWS: usize = 10;
 
@@ -53,10 +57,6 @@ const POPUP_CORNER_RADIUS: u16 = 2;
 
 /// Maximum vertical padding above and below each row, in logical pixels.
 const ROW_PADDING: u16 = 2;
-
-/// Share of the foreground mixed into the popup background for the selected
-/// row's neutral highlight.
-const SELECTED_FILL_SHARE: f32 = 0.12;
 
 /// Share of the foreground mixed into the popup background for a hovered
 /// row's subtle highlight.
@@ -146,7 +146,7 @@ impl CompletionList {
         self.selected
     }
 
-    /// The cells the widest row takes: kind, label, gap, and detail.
+    /// The cells the widest row takes, floored at the minimum popup width.
     fn width_cells(&self) -> usize {
         let label = self.items.iter().map(|item| text::width(&item.label)).max();
         let detail = self
@@ -156,7 +156,9 @@ impl CompletionList {
             .map(text::width)
             .max();
         let detail = detail.map_or(0, |cells| DETAIL_GAP + cells.min(MAX_DETAIL_CELLS));
-        KIND_CELLS + label.unwrap_or(0).min(MAX_LABEL_CELLS) + detail + self.source_cells()
+        let content =
+            KIND_CELLS + label.unwrap_or(0).min(MAX_LABEL_CELLS) + detail + self.source_cells();
+        content.max(MIN_WIDTH_CELLS)
     }
 
     /// The cells the sources' column takes at the right, its gap included;
@@ -260,13 +262,17 @@ impl Widget for CompletionList {
             frame.overlay(|frame| {
                 let row_rect = Rect::new(content.x, row_top, content.width, row_height);
                 if is_selected {
-                    frame.fill_rect(row_rect, selected_row_fill(theme));
+                    frame.fill_rect(row_rect, theme.selected_row);
                 } else if is_hovered {
                     frame.fill_rect(row_rect, hovered_row_fill(theme));
                 }
+                let (kind_color, secondary_color) = match is_selected {
+                    true => (theme.foreground, theme.foreground),
+                    false => (theme.accent, theme.muted),
+                };
                 if let Some(kind) = item.kind {
                     let at = Point::new(text_left, top);
-                    frame.draw_plain_text(&kind.to_string(), at, theme.accent);
+                    frame.draw_plain_text(&kind.to_string(), at, kind_color);
                 }
                 let label = text::fit(&item.label, MAX_LABEL_CELLS);
                 let at = Point::new(text_left + KIND_CELLS as f32 * metrics.width, top);
@@ -276,13 +282,13 @@ impl Widget for CompletionList {
                     let cells = text::width(&detail);
                     let right = KIND_CELLS + label_cells;
                     let at = Point::new(text_left + (right - cells) as f32 * metrics.width, top);
-                    frame.draw_plain_text(&detail, at, theme.muted);
+                    frame.draw_plain_text(&detail, at, secondary_color);
                 }
                 if let Some(source) = &item.source {
                     let source = text::fit(source, MAX_SOURCE_CELLS);
                     let left = KIND_CELLS + label_cells + DETAIL_GAP;
                     let at = Point::new(text_left + left as f32 * metrics.width, top);
-                    frame.draw_plain_text(&source, at, theme.muted);
+                    frame.draw_plain_text(&source, at, secondary_color);
                 }
             });
         }
@@ -302,11 +308,6 @@ fn popup_shape(theme: &Theme) -> Shape {
         row_padding: theme.shape.row_padding.min(ROW_PADDING),
         ..theme.shape
     }
-}
-
-/// Neutral elevated fill for the selected completion row.
-fn selected_row_fill(theme: &Theme) -> Rgb {
-    theme.raised.mix(theme.foreground, SELECTED_FILL_SHARE)
 }
 
 /// Subtle neutral fill for a hovered completion row.
@@ -385,11 +386,20 @@ mod tests {
 
     #[test]
     fn test_a_source_column_follows_the_details_when_any_match_names_one() {
-        let mut items = vec![row("alpha", Some("u8")), row("beta", None)];
+        let mut items = vec![
+            row("calculate_completion_width", Some("usize")),
+            row("beta", None),
+        ];
         let without = CompletionList::new(items.clone(), Rect::default()).width_cells();
         items[1] = items[1].clone().with_source("words");
         let with = CompletionList::new(items, Rect::default()).width_cells();
         assert_eq!(with, without + DETAIL_GAP + 5, "a gap and `words`");
+    }
+
+    #[test]
+    fn test_short_matches_respect_the_minimum_width() {
+        let list = CompletionList::new(vec![row("if", None), row("in", None)], Rect::default());
+        assert_eq!(list.width_cells(), MIN_WIDTH_CELLS);
     }
 
     #[test]
@@ -428,8 +438,8 @@ mod tests {
         snapshot.assert_pixel(
             content.x + content.width / 2.0,
             second,
-            selected_row_fill(&theme),
-            "lit with neutral fill",
+            theme.selected_row,
+            "lit with selected row fill",
         );
         snapshot.assert_pixel(
             content.x + content.width - 1.0,
@@ -441,10 +451,15 @@ mod tests {
 
     #[test]
     fn test_the_width_holds_the_widest_label_and_detail() {
+        let label = "calculate_completion_width";
+        let detail = "usize";
         let list = CompletionList::new(
-            vec![row("len", Some("usize")), row("lines", None)],
+            vec![row(label, Some(detail)), row("lines", None)],
             Rect::default(),
         );
-        assert_eq!(list.width_cells(), KIND_CELLS + 5 + DETAIL_GAP + 5);
+        assert_eq!(
+            list.width_cells(),
+            KIND_CELLS + label.len() + DETAIL_GAP + detail.len()
+        );
     }
 }

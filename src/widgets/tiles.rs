@@ -34,7 +34,7 @@ use super::viewport::Viewport;
 
 /// How many frames a tile is kept without being drawn unless the app says
 /// otherwise: about two seconds of steady drawing.
-pub const DEFAULT_KEEP_FRAMES: u64 = 120;
+pub(crate) const DEFAULT_KEEP_FRAMES: u64 = 120;
 
 /// The finest level of detail, past which zooming in shows the finest
 /// tiles larger.

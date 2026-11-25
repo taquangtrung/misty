@@ -17,6 +17,7 @@ all-features = true
 [lints.rust]
 missing_docs = "deny"
 unsafe_code = "deny"
+unreachable_pub = "warn"
 
 [lints.clippy]
 dbg_macro = "warn"

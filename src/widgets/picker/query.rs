@@ -238,7 +238,7 @@ impl Query {
 /// every row `new` matches `old` matched too, and only `old`'s matches need
 /// scoring again. A regular expression or a `!` word changed at all widens
 /// as readily as it narrows, so it does not count.
-pub fn narrows(old: &Query, new: &Query) -> bool {
+pub(super) fn narrows(old: &Query, new: &Query) -> bool {
     new.terms.len() >= old.terms.len()
         && old
             .terms

@@ -48,7 +48,7 @@ const THREAD_NAME: &str = "picker-matcher";
 
 /// The rows on screen and the counts, as of one generation.
 #[derive(Clone, Debug)]
-pub struct MatchReply {
+pub(super) struct MatchReply {
     /// Whether it answers every command given, not only some of them: a
     /// reply to a selection moved since says where it was, not where it is.
     pub current: bool,
@@ -70,7 +70,7 @@ pub struct MatchReply {
 
 /// One matching row and where it matched.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Shown {
+pub(super) struct Shown {
     /// The letters lit in each field.
     pub lit: Highlights,
     /// The row that matched the query.
@@ -78,7 +78,7 @@ pub struct Shown {
 }
 
 /// A picker session's rows and their scoring.
-pub struct Matcher {
+pub(super) struct Matcher {
     /// The current query's generation.
     generation: u64,
     inner: Inner,
@@ -136,7 +136,7 @@ struct QueryCommand {
 /// A row whose place among the matches the answers follow, and the line
 /// of the list it is kept on.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Tracked {
+pub(super) struct Tracked {
     /// The row.
     pub key: RowKey,
     /// How many rows of the list are above it.
@@ -226,7 +226,7 @@ struct Engine {
 impl Matcher {
     /// A matcher on a worker thread for rows matched on the fields `on`
     /// names; it calls `wake` after each answer, to wake the event loop.
-    pub fn threaded(on: MatchOn, wake: Box<dyn Fn() + Send>) -> Self {
+    pub(super) fn threaded(on: MatchOn, wake: Box<dyn Fn() + Send>) -> Self {
         let (commands, inbox) = mpsc::channel();
         let (outbox, answers) = mpsc::channel();
         let spawned = thread::Builder::new()
@@ -240,7 +240,7 @@ impl Matcher {
 
     /// A matcher scoring on the calling thread, each call done before it
     /// returns: for tests, which must not wait on a thread.
-    pub fn synchronous(on: MatchOn) -> Self {
+    pub(super) fn synchronous(on: MatchOn) -> Self {
         Self::with(Inner::Synchronous(Box::new(SyncState {
             answers: VecDeque::new(),
             worker: Worker::new(on),
@@ -248,12 +248,12 @@ impl Matcher {
     }
 
     /// Keep rows as they come, unscored: for a source that matches them.
-    pub fn unscored(&mut self) {
+    pub(super) fn unscored(&mut self) {
         self.send(Command::Unscored);
     }
 
     /// Score against `query` from now on; its generation.
-    pub fn set_query(&mut self, query: &str) -> u64 {
+    pub(super) fn set_query(&mut self, query: &str) -> u64 {
         self.generation += 1;
         let generation = self.generation;
         self.send(Command::Query(QueryCommand {
@@ -265,12 +265,12 @@ impl Matcher {
 
     /// Add `rows`, scored against the current query and merged in. The
     /// rows go to the worker as they are, so the caller does no work per row.
-    pub fn push(&mut self, rows: Vec<Row>) {
+    pub(super) fn push(&mut self, rows: Vec<Row>) {
         self.send(Command::Push(PushCommand { ranks: None, rows }));
     }
 
     /// Add `rows`, each ranked by its use as `ranks` says, row for row.
-    pub fn push_ranked(&mut self, rows: Vec<Row>, ranks: Vec<u64>) {
+    pub(super) fn push_ranked(&mut self, rows: Vec<Row>, ranks: Vec<u64>) {
         self.send(Command::Push(PushCommand {
             ranks: Some(ranks),
             rows,
@@ -279,40 +279,40 @@ impl Matcher {
 
     /// List `row` after every match from now on, in place of the one pinned
     /// before; `None` lists none.
-    pub fn pin(&mut self, row: Option<Row>) {
+    pub(super) fn pin(&mut self, row: Option<Row>) {
         self.send(Command::Pin(row));
     }
 
     /// Drop every row, for a source giving them again.
-    pub fn clear(&mut self) {
+    pub(super) fn clear(&mut self) {
         self.send(Command::Clear);
     }
 
     /// Ask for `count` matching rows from the `first`.
-    pub fn request_slice(&mut self, first: usize, count: usize) {
+    pub(super) fn request_slice(&mut self, first: usize, count: usize) {
         self.send(Command::Slice(Window { count, first }));
     }
 
     /// Follow a row in every answer: where it is among the matches, and the
     /// slice moved so it stays `offset` rows down the list, so a selection
     /// stays on its row, and its row in its place, as rows arrive.
-    pub fn track(&mut self, tracked: Option<Tracked>) {
+    pub(super) fn track(&mut self, tracked: Option<Tracked>) {
         self.send(Command::Track(tracked));
     }
 
     /// Ask for every matching row, in order, for saving them.
-    pub fn request_matched(&mut self) {
+    pub(super) fn request_matched(&mut self) {
         self.send(Command::Matched);
     }
 
     /// The newest answer of the current generation, if one came since.
-    pub fn poll(&mut self) -> Option<MatchReply> {
+    pub(super) fn poll(&mut self) -> Option<MatchReply> {
         self.drain();
         self.newest.take()
     }
 
     /// The rows asked for with `request_matched`, once they came.
-    pub fn take_matched(&mut self) -> Option<Vec<Row>> {
+    pub(super) fn take_matched(&mut self) -> Option<Vec<Row>> {
         self.drain();
         self.matched.take()
     }

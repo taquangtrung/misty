@@ -33,15 +33,15 @@ use super::geometry::{Point, Rect};
 // ========================================================================
 
 /// How long a hover fade takes unless the theme says otherwise.
-pub const DEFAULT_HOVER_FADE: Duration = Duration::from_millis(140);
+pub(crate) const DEFAULT_HOVER_FADE: Duration = Duration::from_millis(140);
 
 /// How long a caret shows, then hides, in each blink unless the theme says
 /// otherwise: GTK's and Windows' default half period.
-pub const DEFAULT_CARET_BLINK: Duration = Duration::from_millis(530);
+pub(crate) const DEFAULT_CARET_BLINK: Duration = Duration::from_millis(530);
 
 /// How long a caret keeps blinking after the last input before it rests,
 /// shown: GNOME's default, which saves waking an idle app.
-pub const BLINK_TIMEOUT: Duration = Duration::from_secs(10);
+pub(crate) const BLINK_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// How often a running motion wants a new frame: about 60 a second.
 pub(crate) const FRAME_INTERVAL: Duration = Duration::from_millis(16);
