@@ -100,16 +100,26 @@ pub fn fit_label(frame: &Frame, theme: &Theme, text: &StyledText, room: f32) -> 
 /// that is in the proportional font on its own account, such as a
 /// proportional [`TextField`](super::text_field::TextField)'s placeholder.
 pub(crate) fn fit_proportional(frame: &Frame, text: &StyledText, room: f32) -> StyledText {
-    // Drop a character at a time until the text fits, as the cell grid's
-    // cut does, so the ellipsis lands where it would there.
-    let mut cells = text.width();
-    loop {
-        let fitted = text.fit(cells);
-        if cells == 0 || frame.paragraph_width(&styled_paragraph(&fitted)) <= room {
-            return fitted;
-        }
-        cells -= 1;
+    // The most characters that fit, cut as the cell grid's cut does, so
+    // the ellipsis lands where it would there. Found by halving: each cut
+    // is shaped to be measured, and a command line thousands of characters
+    // long cut a character at a time was shaped thousands of times in one
+    // frame, and its every cut kept in the shape cache.
+    let fits = |cells| frame.paragraph_width(&styled_paragraph(&text.fit(cells))) <= room;
+    let whole = text.width();
+    if fits(whole) {
+        return text.clone();
     }
+    // `low` fits, or is none at all; `high` does not fit.
+    let (mut low, mut high) = (0, whole);
+    while high - low > 1 {
+        let middle = low + (high - low) / 2;
+        match fits(middle) {
+            true => low = middle,
+            false => high = middle,
+        }
+    }
+    text.fit(low)
 }
 
 /// Draws `text` as a label on the line a cell tall whose top left corner
@@ -241,6 +251,23 @@ mod tests {
             let drawn: String = crate::testing::drawn_text(&frame).concat();
             assert_eq!(drawn, "1/1", "{chrome_text:?}");
         }
+    }
+
+    #[test]
+    fn test_a_label_thousands_of_characters_long_is_cut_to_the_most_that_fit() {
+        // A process's command line cut a character at a time hung the
+        // window, shaping each of its cuts in one frame.
+        let frame = offscreen::plain_frame(400, 100);
+        let long = "java -cp app.jar ".repeat(1200);
+        let text = StyledText::plain(long, TextColor::Palette(CellColor::Default)).with_ellipsis();
+        let room = 300.0;
+        let fitted = fit_proportional(&frame, &text, room);
+        let width = |text: &StyledText| frame.paragraph_width(&styled_paragraph(text));
+        assert!(width(&fitted) <= room, "{}", width(&fitted));
+        assert!(
+            width(&text.fit(fitted.width() + 1)) > room,
+            "one more character would have fit"
+        );
     }
 
     fn theme(chrome_text: ChromeText) -> Theme {
