@@ -15,7 +15,7 @@ use winit::application::ApplicationHandler;
 use winit::dpi::{LogicalPosition, PhysicalPosition, PhysicalSize};
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
-use winit::window::{self, Theme, Window};
+use winit::window::{self, Fullscreen, Theme, Window};
 
 use super::super::app::access::{AccessTree, access_action};
 use super::super::app::application::{AppContext, Application, OpenView};
@@ -571,6 +571,10 @@ impl OpenWindow {
                 window.set_window_icon(icon.as_ref().and_then(window_icon));
             }
             WindowAction::SetVisible(visible) => window.set_visible(visible),
+            WindowAction::ToggleFullscreen => window.set_fullscreen(match window.fullscreen() {
+                Some(_) => None,
+                None => Some(Fullscreen::Borderless(None)),
+            }),
             WindowAction::ToggleMaximize => window.set_maximized(!window.is_maximized()),
             // Carried out with the shared GPU and fonts, or on the window's
             // own state, before any reach here.

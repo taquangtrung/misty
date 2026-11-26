@@ -150,6 +150,8 @@ pub(crate) enum WindowAction {
     SetTransparent(bool),
     /// Show the window (`true`) or hide it.
     SetVisible(bool),
+    /// Fill the screen with the window, or restore it when it does.
+    ToggleFullscreen,
     /// Maximize the window, or restore it when it is maximized.
     ToggleMaximize,
 }
@@ -353,6 +355,13 @@ impl<'a> EventCx<'a> {
     /// Maximizes the window, or restores it when it is maximized.
     pub fn toggle_maximize(&mut self) {
         self.act(WindowAction::ToggleMaximize);
+    }
+
+    /// Fills the screen with the window, with no frame or title bar, or
+    /// restores it when it does. On macOS it is the system's own full
+    /// screen, in a Space of its own.
+    pub fn toggle_fullscreen(&mut self) {
+        self.act(WindowAction::ToggleFullscreen);
     }
 
     /// Shows the window (`true`) or hides it, keeping it open: a popup hides
