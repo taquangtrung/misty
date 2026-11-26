@@ -125,6 +125,11 @@ const LABEL_GAP: f32 = 3.0;
 /// rounding takes, never a cut character.
 const CUT_SLACK: f32 = 1.0;
 
+/// The pixels a scroller's right edge may lie off the inner edge of the
+/// padding its scrollbar may run in and still count as reaching it: what
+/// rounding takes.
+const EDGE_SLACK: f32 = 0.5;
+
 /// The rows between two rows of a form.
 const FORM_ROW_GAP: f32 = 0.5;
 
@@ -349,6 +354,8 @@ struct SplitShape<A> {
 
 /// How a flattened container lays its children out.
 struct Shape<'a> {
+    /// Whether a scrollbar inside it may run in its right padding.
+    bars_in_padding: bool,
     /// Whether a form sets its labels in the theme's chrome font.
     chrome_labels: bool,
     /// The direction.
@@ -401,10 +408,23 @@ enum Place {
 /// Where a frame lays elements out and what it draws them with.
 #[derive(Clone, Copy)]
 struct Room {
+    /// The right padding around it that a scrollbar along its right edge
+    /// may run in, if a container gave it one.
+    bar_room: Option<BarRoom>,
     /// The frame's cell size.
     metrics: CellMetrics,
     /// The frame's scale factor.
     scale: f64,
+}
+
+/// The right padding of a container that lets scrollbars run in it
+/// ([`Element::bars_in_padding`]), as window x positions.
+#[derive(Clone, Copy, Debug)]
+struct BarRoom {
+    /// Its inner edge, where the content ends.
+    inner: f32,
+    /// Its outer edge, the container's own right edge.
+    outer: f32,
 }
 
 /// Where each element of a flattened tree landed: at its index, and each
@@ -463,6 +483,7 @@ impl Store {
         self.sync(&tree);
         let flat = &tree.flat;
         let room = Room {
+            bar_room: None,
             metrics: frame.cell_metrics(),
             scale: frame.scale_factor(),
         };
@@ -1925,6 +1946,18 @@ impl Store {
             FlatKind::Container(shape) => {
                 self.note_regions(flat, index, rect, scroll);
                 let width = self.label_width(index, shape, room.metrics);
+                let room = match shape.bars_in_padding {
+                    true => {
+                        let sizing = node.extras.as_ref().map(|extras| &extras.sizing);
+                        let outer = rect.x + rect.width;
+                        let inner = outer - padding(node.padding, sizing, room).right;
+                        Room {
+                            bar_room: Some(BarRoom { inner, outer }),
+                            ..room
+                        }
+                    }
+                    false => room,
+                };
                 for (place, child) in node.children.iter().enumerate() {
                     if let Some(label) = shape.labels.get(place) {
                         let row = rects.get(flat.len() + child);
@@ -1963,7 +1996,9 @@ impl Store {
             return;
         };
         scroll.set_content_size(0.0, height);
+        scroll.set_outset(bar_outset(room, rect));
         let viewport = scroll.draw(frame, rect, theme);
+        let pointer_area = scroll.pointer_area().unwrap_or(viewport);
         scroll.access(frame, node.id);
         let offset = scroll.offset();
         let origin = Point::new(viewport.x, viewport.y - offset.y);
@@ -1973,7 +2008,7 @@ impl Store {
             rects.take(&content.compute(area), flat.len(), Some(index));
         }
         // Its controls register inside it, so they show only within it.
-        self.focus.enter(node.id, viewport);
+        self.focus.enter(node.id, pointer_area);
         if let Some(order) = node.order {
             self.focus.set_order(node.id, order);
         }
@@ -1985,6 +2020,11 @@ impl Store {
         let width = match &node.kind {
             FlatKind::Container(shape) => self.label_width(index, shape, room.metrics),
             FlatKind::Control(_) | FlatKind::Split(_) | FlatKind::Text(_) => 0.0,
+        };
+        // What it holds scrolls inside it, so no bar there runs past it.
+        let inner = Room {
+            bar_room: None,
+            ..room
         };
         frame.clipped(viewport, |frame| {
             let FlatKind::Container(shape) = &node.kind else {
@@ -2001,7 +2041,7 @@ impl Store {
                     rects,
                     frame,
                     theme,
-                    room,
+                    inner,
                     Some(context),
                     reveal,
                 );
@@ -2041,7 +2081,9 @@ impl Store {
             return;
         };
         scroll.set_content_size(0.0, lazy.count as f32 * average);
+        scroll.set_outset(bar_outset(room, rect));
         let viewport = scroll.draw(frame, rect, theme);
+        let pointer_area = scroll.pointer_area().unwrap_or(viewport);
         scroll.access(frame, node.id);
         // The cursor's row comes into view at once when it moved: a jump
         // need not build every row it passes.
@@ -2068,7 +2110,7 @@ impl Store {
             let area = Rect::new(origin.x, top, viewport.width, viewport.height);
             rects.take(&content.compute(area), flat.len(), Some(index));
         }
-        self.focus.enter(node.id, viewport);
+        self.focus.enter(node.id, pointer_area);
         if let Some(order) = node.order {
             self.focus.set_order(node.id, order);
         }
@@ -2076,6 +2118,11 @@ impl Store {
             id: node.id,
             origin,
             viewport,
+        };
+        // What it holds scrolls inside it, so no bar there runs past it.
+        let inner = Room {
+            bar_room: None,
+            ..room
         };
         frame.clipped(viewport, |frame| {
             for child in &node.children {
@@ -2085,7 +2132,7 @@ impl Store {
                     rects,
                     frame,
                     theme,
-                    room,
+                    inner,
                     Some(context),
                     reveal,
                 );
@@ -2398,6 +2445,7 @@ fn push_flat<'a, A>(
     let (kind, children) = match element.kind {
         Kind::Container(container) => {
             let shape = Shape {
+                bars_in_padding: container.bars_in_padding,
                 chrome_labels: container.chrome_labels,
                 direction: container.direction,
                 labels: container.labels,
@@ -2490,6 +2538,7 @@ fn lazy_rows<'a, A>(
         _ => 0..count.min(LAZY_FIRST_ROWS),
     };
     let shape = Shape {
+        bars_in_padding: false,
         chrome_labels: false,
         direction: Direction::Column,
         labels: Vec::new(),
@@ -2664,6 +2713,16 @@ fn draw_label(
     }
     let text = StyledText::plain(label, ThemeToken::Muted.into());
     frame.draw_text(&text, Point::new(row.x, y), clip, theme);
+}
+
+/// How far past its right edge the scrollbar of a scroller at `rect` may
+/// run: to the outer edge of the padding `room` gives, when the scroller
+/// reaches that padding; else not at all.
+fn bar_outset(room: Room, rect: Rect) -> f32 {
+    let right = rect.x + rect.width;
+    room.bar_room
+        .filter(|bar| (right - bar.inner).abs() <= EDGE_SLACK)
+        .map_or(0.0, |bar| bar.outer - right)
 }
 
 /// The blank space inside an element: `cells` in cell columns and rows,

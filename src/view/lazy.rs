@@ -127,7 +127,7 @@ mod tests {
 
     use super::super::super::base::geometry::Point;
     use super::super::super::base::theme::Theme;
-    use super::super::super::input::event::{Input, WheelDelta, WheelInput};
+    use super::super::super::input::event::{Input, PointerButton, WheelDelta, WheelInput};
     use super::super::super::platform::window_id::WindowId;
     use super::super::super::testing::TreeWindow;
     use super::super::app::App;
@@ -250,6 +250,18 @@ mod tests {
         settle(&mut window);
         let rows = shown(&window);
         assert!(!rows.contains(&"row 00000".to_string()), "{rows:?}");
+    }
+
+    #[test]
+    fn test_a_filled_pages_scrollbar_sits_at_its_edge_and_takes_the_pointer() {
+        // It sat inside the page's padding, out of the pointer's reach: a
+        // press on it landed on nothing.
+        let mut window = window(true);
+        let edge = Point::new(598.0, 300.0);
+        window.click_at(edge, PointerButton::Left);
+        settle(&mut window);
+        let rows = shown(&window);
+        assert!(!rows.contains(&"row 00000".to_string()), "paged: {rows:?}");
     }
 
     /// A few rows that each take a press.

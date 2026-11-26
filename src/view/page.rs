@@ -367,9 +367,10 @@ impl<'a, A: 'static> From<ScrollingPage<'a, A>> for Element<'a, A> {
 impl<'a, A: 'static> From<FilledPage<'a, A>> for Element<'a, A> {
     fn from(page: FilledPage<'a, A>) -> Self {
         // The content takes all the room, for what scrolls inside it to
-        // fill.
+        // fill, its scrollbar in the padding at the page's edge.
         let content = column([page.content.grow(1.0)])
             .padding(PAGE_PADDING_COLS, 1.0)
+            .bars_in_padding()
             .grow(1.0);
         page.parts.around(content)
     }

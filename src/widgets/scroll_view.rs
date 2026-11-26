@@ -93,6 +93,9 @@ pub struct ScrollView {
     hover: Option<Axis>,
     /// Where the parts were drawn last, for the pointer.
     layout: Option<ScrollLayout>,
+    /// How far past the view's right edge its vertical scrollbar may run,
+    /// in physical pixels: the padding beside it that it sits in.
+    outset: f32,
     /// The sideways offset, easing toward its target.
     scroll_x: SmoothScroll,
     /// The vertical offset, easing toward its target.
@@ -229,6 +232,27 @@ impl ScrollView {
         self.layout.map(|layout| layout.viewport)
     }
 
+    /// Lets the vertical scrollbar run `outset` physical pixels past the
+    /// view's right edge, in the padding beside it, from the next frame;
+    /// the viewport then takes the width the scrollbar would have.
+    pub(crate) fn set_outset(&mut self, outset: f32) {
+        self.outset = outset.max(0.0);
+    }
+
+    /// What the view takes the pointer over, as the last frame laid it
+    /// out: its viewport and its vertical scrollbar, wherever that runs.
+    pub(crate) fn pointer_area(&self) -> Option<Rect> {
+        self.layout.map(|layout| match layout.vertical {
+            Some(track) => Rect::new(
+                layout.viewport.x,
+                layout.viewport.y,
+                track.x + track.width - layout.viewport.x,
+                layout.viewport.height,
+            ),
+            None => layout.viewport,
+        })
+    }
+
     /// Leaves the scrollbars out (`true`), the viewport taking the whole
     /// view, which still scrolls by keys and the wheel; or shows them
     /// again.
@@ -334,10 +358,12 @@ impl ScrollView {
 
     /// Scrolls by the wheel `wheel` over the view.
     fn handle_wheel(&mut self, wheel: &WheelInput) -> ScrollViewResponse {
-        let Some(layout) = self
-            .layout
-            .filter(|layout| layout.area.contains(wheel.position))
-        else {
+        let Some(layout) = self.layout.filter(|layout| {
+            layout.area.contains(wheel.position)
+                || layout
+                    .vertical
+                    .is_some_and(|track| track.contains(wheel.position))
+        }) else {
             return ScrollViewResponse::Ignored;
         };
         let (delta, glide) = match wheel.delta {
@@ -567,6 +593,7 @@ impl ScrollView {
             area,
             self.content,
             track,
+            self.outset,
             frame.cell_metrics().height,
             scale_factor,
         );
@@ -765,20 +792,31 @@ fn scroll_response(moved: bool) -> ScrollViewResponse {
 
 /// Lays out a view of `content` in `area`: a track `track` wide along each
 /// side the content overflows (along the bottom taking room from the
-/// right one's need, and the other way round), the rest the viewport.
-fn lay_out(area: Rect, content: Point, track: f32, line: f32, scale_factor: f64) -> ScrollLayout {
+/// right one's need, and the other way round), the rest the viewport. The
+/// right track ends `outset` past the area's right edge, in the padding
+/// there, and takes from the viewport only what the outset leaves it.
+fn lay_out(
+    area: Rect,
+    content: Point,
+    track: f32,
+    outset: f32,
+    line: f32,
+    scale_factor: f64,
+) -> ScrollLayout {
+    let taken = (track - outset).max(0.0);
     let mut vertical = content.y > area.height;
-    let horizontal = content.x > area.width - if vertical { track } else { 0.0 };
+    let horizontal = content.x > area.width - if vertical { taken } else { 0.0 };
     vertical = content.y > area.height - if horizontal { track } else { 0.0 };
-    let width = (area.width - if vertical { track } else { 0.0 }).max(0.0);
+    let width = (area.width - if vertical { taken } else { 0.0 }).max(0.0);
     let height = (area.height - if horizontal { track } else { 0.0 }).max(0.0);
     let viewport = Rect::new(area.x, area.y, width, height);
+    let right = area.x + area.width + outset;
     ScrollLayout {
         area,
         horizontal: horizontal.then(|| Rect::new(area.x, area.y + height, width, track)),
         line,
         scale_factor,
-        vertical: vertical.then(|| Rect::new(area.x + width, area.y, track, height)),
+        vertical: vertical.then(|| Rect::new(right - track, area.y, track, height)),
         viewport,
     }
 }
@@ -842,15 +880,26 @@ mod tests {
 
     #[test]
     fn test_a_bar_shows_only_along_a_side_the_content_overflows() {
-        let only_tall = lay_out(AREA, Point::new(150.0, 1000.0), 10.0, 16.0, 1.0);
+        let only_tall = lay_out(AREA, Point::new(150.0, 1000.0), 10.0, 0.0, 16.0, 1.0);
         assert_eq!(only_tall.viewport, Rect::new(0.0, 0.0, 190.0, 100.0));
         assert_eq!(only_tall.horizontal, None);
         // 195 fits 200 but not the 190 left beside the vertical bar.
-        let both = lay_out(AREA, Point::new(195.0, 1000.0), 10.0, 16.0, 1.0);
+        let both = lay_out(AREA, Point::new(195.0, 1000.0), 10.0, 0.0, 16.0, 1.0);
         assert_eq!(both.viewport, Rect::new(0.0, 0.0, 190.0, 90.0));
         assert_eq!(both.horizontal, Some(Rect::new(0.0, 90.0, 190.0, 10.0)));
-        let fits = lay_out(AREA, Point::new(200.0, 100.0), 10.0, 16.0, 1.0);
+        let fits = lay_out(AREA, Point::new(200.0, 100.0), 10.0, 0.0, 16.0, 1.0);
         assert_eq!((fits.vertical, fits.horizontal), (None, None));
+    }
+
+    #[test]
+    fn test_a_bar_with_room_past_the_edge_runs_there_and_leaves_the_viewport_whole() {
+        let padded = lay_out(AREA, Point::new(150.0, 1000.0), 10.0, 16.0, 16.0, 1.0);
+        assert_eq!(padded.viewport, Rect::new(0.0, 0.0, 200.0, 100.0));
+        assert_eq!(padded.vertical, Some(Rect::new(206.0, 0.0, 10.0, 100.0)));
+        // Room for half the track takes the other half from the viewport.
+        let short = lay_out(AREA, Point::new(150.0, 1000.0), 10.0, 5.0, 16.0, 1.0);
+        assert_eq!(short.viewport.width, 195.0);
+        assert_eq!(short.vertical, Some(Rect::new(195.0, 0.0, 10.0, 100.0)));
     }
 
     #[test]

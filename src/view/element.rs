@@ -133,6 +133,9 @@ pub(crate) struct SplitParts<'a, A> {
 
 /// Elements laid out together.
 pub(crate) struct Container<'a, A> {
+    /// Whether a scrollbar along its content's right edge runs in its
+    /// right padding, at its own right edge.
+    pub(crate) bars_in_padding: bool,
     /// Whether a form sets its labels in the theme's chrome font.
     pub(crate) chrome_labels: bool,
     /// The elements inside, in order.
@@ -311,6 +314,20 @@ impl<'a, A> Element<'a, A> {
     pub fn scroll(mut self) -> Self {
         if let Kind::Container(container) = &mut self.kind {
             container.scroll = true;
+        }
+        self
+    }
+
+    /// This container letting the scrollbar of an element inside it that
+    /// scrolls itself, such as a [`lazy_column`](super::lazy_column), run
+    /// in its right padding, along its own right edge, when that element
+    /// reaches the padding: so a padded list's scrollbar sits at the edge
+    /// of the pane, as a scrolling container's does, and its rows keep the
+    /// padding. A [`Page::filled`](super::Page::filled) page's content is
+    /// so. Nothing for a control or text.
+    pub fn bars_in_padding(mut self) -> Self {
+        if let Kind::Container(container) = &mut self.kind {
+            container.bars_in_padding = true;
         }
         self
     }
@@ -681,6 +698,7 @@ impl<'a, A> Element<'a, A> {
         labels: Vec<&'a str>,
     ) -> Self {
         Self::new(Kind::Container(Container {
+            bars_in_padding: false,
             chrome_labels: false,
             children,
             direction,
