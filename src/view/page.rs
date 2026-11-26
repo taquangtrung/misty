@@ -1,7 +1,7 @@
 //! The parts a page of an app is built from, as a settings page, a list of
 //! extensions, a keybinding table, or a dashboard is: a [`page`] with its
-//! heading, scope tabs, actions, sidebar, scrolling content, and a footer
-//! of details on what is selected, the [`sidebar`] choosing what it shows, [`section`]s grouping
+//! heading, scope tabs, actions, sidebar, content, and a footer of details
+//! on what is selected, the [`sidebar`] choosing what it shows, [`section`]s grouping
 //! [`item`]s in cards, and the [`badge`]s, [`keycap`]s, and [`divider`]s
 //! inside them. Words are set in the proportional (UI) font, a key cap's
 //! key on the cell grid; a badge and a key cap are as wide as what they
@@ -10,6 +10,19 @@
 //! the keyboard, and describes itself to screen readers as any tree does,
 //! in a window misty runs or in an area a [`ViewHost`](super::ViewHost)
 //! draws.
+//!
+//! A page is one of two kinds, chosen by how its content is given:
+//!
+//! - [`Page::scrolling`] for content built in full, which misty scrolls
+//!   when it does not fit: a form, sections of items, a table of a few
+//!   hundred rows. A row an app's own cursor is on stays in view with
+//!   [`Element::keep_in_view`].
+//! - [`Page::filled`] for content as tall as the room under the heading,
+//!   holding an element that scrolls itself and builds only what shows:
+//!   a [`lazy_column`](super::lazy_column), a [`list`](super::list), a
+//!   [`table`](super::table). Such an element inside a scrolling page has
+//!   no height to fill; [`nested_scrolls`](crate::testing::nested_scrolls)
+//!   finds it in a test.
 //!
 //! ```
 //! use misty::view::{badge, item, page, section, sidebar, text};
@@ -32,7 +45,7 @@
 //!             .sidebar(sidebar(["Installed", "Available"], self.shown, |page: &mut Self, at| {
 //!                 page.shown = at;
 //!             }))
-//!             .content(section("Installed").items(rows))
+//!             .scrolling(section("Installed").items(rows))
 //!             .footer(text("Asks to read ~/Notes").muted())
 //!             .into()
 //!     }
@@ -103,19 +116,41 @@ const CLOSED_CHEVRON: &str = "\u{25b8}";
 // Data Structures
 // ========================================================================
 
-/// A page: a heading over a sidebar and scrolling content, over a line of
-/// hints. Made by [`page`].
+/// A page before its kind is chosen: its heading, the actions and scope
+/// tabs at the heading's right, and its sidebar. Made by [`page`]; given
+/// its content by [`Page::scrolling`] or [`Page::filled`], which make it
+/// an element.
 pub struct Page<'a, A> {
+    parts: PageParts<'a, A>,
+}
+
+/// A page whose content is built in full and scrolled by misty when it
+/// does not fit. Made by [`Page::scrolling`].
+pub struct ScrollingPage<'a, A> {
+    /// What the page shows.
+    content: Element<'a, A>,
+    parts: PageParts<'a, A>,
+    /// The id the scrolling content takes, if the app names it.
+    scroll_id: Option<Cow<'a, str>>,
+}
+
+/// A page whose content is as tall as the room under its heading, never
+/// scrolled itself: an element inside it scrolls and builds only what
+/// shows. Made by [`Page::filled`].
+pub struct FilledPage<'a, A> {
+    /// What the page shows.
+    content: Element<'a, A>,
+    parts: PageParts<'a, A>,
+}
+
+/// What every kind of page has around its content.
+struct PageParts<'a, A> {
     /// The elements at the heading's right, after the scope tabs.
     actions: Vec<Element<'a, A>>,
-    /// What the page shows, scrolling when it does not fit.
-    content: Option<Element<'a, A>>,
     /// The details of what is selected, under the content, if any.
     footer: Option<Element<'a, A>>,
     /// The scope tabs at the heading's right, if any.
     scopes: Option<Element<'a, A>>,
-    /// The id the scrolling content takes, if the app names it.
-    scroll_id: Option<Cow<'a, str>>,
     /// What chooses what the content shows, at the page's left, if any.
     sidebar: Option<Element<'a, A>>,
     /// The page's heading.
@@ -187,29 +222,8 @@ pub struct Item<'a, A> {
 impl<'a, A: 'static> Page<'a, A> {
     /// This page with `element` at its heading's right: a button, a menu.
     pub fn action(mut self, element: impl Into<Element<'a, A>>) -> Self {
-        self.actions.push(element.into());
+        self.parts.actions.push(element.into());
         self
-    }
-
-    /// This page showing `content` under its heading, scrolling it when it
-    /// does not fit.
-    pub fn content(self, content: impl Into<Element<'a, A>>) -> Self {
-        Self {
-            content: Some(content.into()),
-            ..self
-        }
-    }
-
-    /// This page with `details` at its foot, under a line: more about what
-    /// is selected than its row says (a process's paths and command line,
-    /// a setting's description). Not the keys the page takes: a page names
-    /// those where the app lists keys, and the details change with the
-    /// selection.
-    pub fn footer(self, details: impl Into<Element<'a, A>>) -> Self {
-        Self {
-            footer: Some(details.into()),
-            ..self
-        }
     }
 
     /// This page with a tab for each of `names` at its heading's right,
@@ -217,7 +231,7 @@ impl<'a, A: 'static> Page<'a, A> {
     /// kept in (User and Workspace) or the views of its content. Pressing
     /// one runs `on_choose` with its index.
     pub fn scopes<N: Into<Cow<'a, str>>>(
-        self,
+        mut self,
         names: impl IntoIterator<Item = N>,
         shown: usize,
         on_choose: impl Fn(&mut A, usize) + 'static,
@@ -241,48 +255,51 @@ impl<'a, A: 'static> Page<'a, A> {
             .padding(1.0, 0.0)
             .on_press(move |state: &mut A, _| on_choose(state, index))
         });
-        Self {
-            scopes: Some(row(tabs).gap(Space::Cells(0.0))),
-            ..self
-        }
-    }
-
-    /// This page's scrolling content named `id`, so the app's own keys can
-    /// scroll it ([`ViewHost::scroll`](super::ViewHost::scroll)).
-    pub fn scroll_id(self, id: impl Into<Cow<'a, str>>) -> Self {
-        Self {
-            scroll_id: Some(id.into()),
-            ..self
-        }
+        self.parts.scopes = Some(row(tabs).gap(Space::Cells(0.0)));
+        self
     }
 
     /// This page with `sidebar` at its left, on the theme's surface: what
     /// chooses what the content shows, such as a [`sidebar()`].
-    pub fn sidebar(self, sidebar: impl Into<Element<'a, A>>) -> Self {
-        Self {
-            sidebar: Some(sidebar.into()),
-            ..self
+    pub fn sidebar(mut self, sidebar: impl Into<Element<'a, A>>) -> Self {
+        self.parts.sidebar = Some(sidebar.into());
+        self
+    }
+
+    /// This page showing `content`, built in full, under its heading,
+    /// misty scrolling it when it does not fit.
+    pub fn scrolling(self, content: impl Into<Element<'a, A>>) -> ScrollingPage<'a, A> {
+        ScrollingPage {
+            content: content.into(),
+            parts: self.parts,
+            scroll_id: None,
+        }
+    }
+
+    /// This page showing `content` under its heading as tall as the room
+    /// there, never scrolled itself: for content holding an element that
+    /// scrolls and builds only what shows, such as a
+    /// [`lazy_column`](super::lazy_column).
+    pub fn filled(self, content: impl Into<Element<'a, A>>) -> FilledPage<'a, A> {
+        FilledPage {
+            content: content.into(),
+            parts: self.parts,
         }
     }
 }
 
-impl<'a, A: 'static> From<Page<'a, A>> for Element<'a, A> {
-    fn from(page: Page<'a, A>) -> Self {
+impl<'a, A: 'static> PageParts<'a, A> {
+    /// The page laid out around `content`: the heading over a line, then
+    /// the sidebar beside the content, then the footer under a line.
+    fn around(self, content: Element<'a, A>) -> Element<'a, A> {
         let mut heading = vec![
-            ui(page.title).emphasized().into(),
+            ui(self.title).emphasized().into(),
             column(Vec::new()).grow(1.0),
         ];
-        heading.extend(page.scopes);
-        heading.extend(page.actions);
+        heading.extend(self.scopes);
+        heading.extend(self.actions);
         let heading = row(heading).padding(PAGE_PADDING_COLS, BAND_PADDING_ROWS);
-        let mut content = column(page.content)
-            .padding(PAGE_PADDING_COLS, 1.0)
-            .scroll()
-            .grow(1.0);
-        if let Some(id) = page.scroll_id {
-            content = content.id(id);
-        }
-        let body = match page.sidebar {
+        let body = match self.sidebar {
             Some(sidebar) => row([
                 column([sidebar])
                     .width(Extent::Cells(SIDEBAR_COLS))
@@ -298,11 +315,63 @@ impl<'a, A: 'static> From<Page<'a, A>> for Element<'a, A> {
         .align(Align::Stretch)
         .grow(1.0);
         let mut parts = vec![heading, divider(), body];
-        if let Some(footer) = page.footer {
+        if let Some(footer) = self.footer {
             parts.push(divider());
             parts.push(column([footer]).padding(PAGE_PADDING_COLS, BAND_PADDING_ROWS));
         }
         column(parts).gap(Space::Cells(0.0)).grow(1.0)
+    }
+}
+
+impl<'a, A: 'static> ScrollingPage<'a, A> {
+    /// This page with `details` at its foot, under a line (see
+    /// [`FilledPage::footer`]).
+    pub fn footer(mut self, details: impl Into<Element<'a, A>>) -> Self {
+        self.parts.footer = Some(details.into());
+        self
+    }
+
+    /// This page's scrolling content named `id`, so the app's own keys can
+    /// scroll it ([`ViewHost::scroll`](super::ViewHost::scroll)).
+    pub fn scroll_id(mut self, id: impl Into<Cow<'a, str>>) -> Self {
+        self.scroll_id = Some(id.into());
+        self
+    }
+}
+
+impl<'a, A: 'static> FilledPage<'a, A> {
+    /// This page with `details` at its foot, under a line: more about what
+    /// is selected than its row says (a process's paths and command line,
+    /// a setting's description). Not the keys the page takes: a page names
+    /// those where the app lists keys, and the details change with the
+    /// selection.
+    pub fn footer(mut self, details: impl Into<Element<'a, A>>) -> Self {
+        self.parts.footer = Some(details.into());
+        self
+    }
+}
+
+impl<'a, A: 'static> From<ScrollingPage<'a, A>> for Element<'a, A> {
+    fn from(page: ScrollingPage<'a, A>) -> Self {
+        let mut content = column([page.content])
+            .padding(PAGE_PADDING_COLS, 1.0)
+            .scroll()
+            .grow(1.0);
+        if let Some(id) = page.scroll_id {
+            content = content.id(id);
+        }
+        page.parts.around(content)
+    }
+}
+
+impl<'a, A: 'static> From<FilledPage<'a, A>> for Element<'a, A> {
+    fn from(page: FilledPage<'a, A>) -> Self {
+        // The content takes all the room, for what scrolls inside it to
+        // fill.
+        let content = column([page.content.grow(1.0)])
+            .padding(PAGE_PADDING_COLS, 1.0)
+            .grow(1.0);
+        page.parts.around(content)
     }
 }
 
@@ -600,17 +669,18 @@ impl<'a, A: 'static> From<Item<'a, A>> for Element<'a, A> {
 // Functions
 // ========================================================================
 
-/// A page headed `title`, with nothing in it yet: give it its content,
-/// and a sidebar, scope tabs, actions, and a footer as it has them.
+/// A page headed `title`, with nothing in it yet: give it a sidebar, scope
+/// tabs, and actions as it has them, then its content as a scrolling or a
+/// filled page ([`Page::scrolling`], [`Page::filled`]), and a footer.
 pub fn page<'a, A: 'static>(title: impl Into<Cow<'a, str>>) -> Page<'a, A> {
     Page {
-        actions: Vec::new(),
-        content: None,
-        footer: None,
-        scopes: None,
-        scroll_id: None,
-        sidebar: None,
-        title: title.into(),
+        parts: PageParts {
+            actions: Vec::new(),
+            footer: None,
+            scopes: None,
+            sidebar: None,
+            title: title.into(),
+        },
     }
 }
 
@@ -837,7 +907,7 @@ mod tests {
                 .scopes(["User", "Workspace"], 0, |demo: &mut Self, at| {
                     demo.shown = 10 + at
                 })
-                .content(installed)
+                .scrolling(installed)
                 .footer(text("Alpha runs at start").muted())
                 .into()
         }
@@ -917,6 +987,45 @@ mod tests {
         assert_eq!(c.x, a.x, "under A, the row's other half empty");
     }
 
+    /// A page holding a list, scrolling or filled.
+    struct Listing {
+        filled: bool,
+        rows: Vec<String>,
+        theme: Theme,
+    }
+
+    impl App for Listing {
+        fn view(&self, _window: WindowId) -> Element<'_, Self> {
+            let rows = super::super::data::list(&self.rows, 0);
+            let shown = page("Listing");
+            match self.filled {
+                true => shown.filled(rows).into(),
+                false => shown.scrolling(rows).into(),
+            }
+        }
+
+        fn theme(&self) -> &Theme {
+            &self.theme
+        }
+    }
+
+    #[test]
+    fn test_a_list_in_a_scrolling_page_is_found_and_in_a_filled_page_is_not() {
+        let listing = |filled| Listing {
+            filled,
+            rows: (0..50).map(|at| format!("row {at}")).collect(),
+            theme: Theme::dark(),
+        };
+        let scrolling = TreeWindow::new(listing(false), "listing", 600, 400);
+        let nested = crate::testing::nested_scrolls(scrolling.frame());
+        assert_eq!(nested.len(), 1, "{nested:?}");
+        let filled = TreeWindow::new(listing(true), "listing", 600, 400);
+        assert_eq!(
+            crate::testing::nested_scrolls(filled.frame()),
+            Vec::<String>::new()
+        );
+    }
+
     #[test]
     fn test_the_page_draws_its_heading_sections_and_footer() {
         let window = window();
@@ -977,7 +1086,10 @@ mod tests {
 
         window.click(Role::Button, "Add");
         assert_eq!(window.app().added, 1);
-        assert!(window.app().open, "trailing button click must not toggle header");
+        assert!(
+            window.app().open,
+            "trailing button click must not toggle header"
+        );
 
         window.click(Role::Button, &format!("{OPEN_CHEVRON} STAGED 3"));
         assert!(!window.app().open, "clicking header toggles open state");

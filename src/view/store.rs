@@ -80,7 +80,7 @@ use super::super::widgets::tooltip::Tooltip;
 use super::app::{App, AppCx, Asks};
 use super::chrome::SplitBox;
 use super::controls::{Callback, call};
-use super::element::{Direction, Element, Kind, MenuRequest, Overlay, Text};
+use super::element::{Direction, Element, Kind, Lazy, MenuRequest, Overlay, Text};
 use super::embed::ScrollStep;
 use super::host::{Host, WindowHost};
 use super::node::{Call, ControlDrag, MovingDrag, Node, Stored, layer_id, over_id};
@@ -90,6 +90,14 @@ use super::region::{RegionBox, RegionCx, describe_button, region_id};
 // ========================================================================
 // Constants
 // ========================================================================
+
+/// How many rows a lazy column builds before it was ever drawn, when how
+/// many show is not known yet.
+const LAZY_FIRST_ROWS: usize = 64;
+
+/// How tall a lazy column takes a row to be, in cell rows, before it has
+/// measured any.
+const LAZY_FIRST_ROW_CELLS: f32 = 1.5;
 
 /// The id the root element's id is made from.
 const ROOT: FocusId = FocusId::new("misty.view");
@@ -206,6 +214,16 @@ pub(crate) struct Store {
     kept: Option<(FocusId, FocusId, Rect)>,
     /// The element marked to be kept in view last scrolled into view.
     kept_revealed: Option<FocusId>,
+    /// Whether a lazy column built other rows than it now shows, which
+    /// [`Store::about_to_wait`] draws again for.
+    lazy_again: bool,
+    /// What each lazy column ([`lazy_column`](super::lazy_column)) keeps
+    /// between frames, by id: the rows to build and how tall they are.
+    lazies: HashMap<FocusId, LazyState>,
+    /// The rows each lazy column with an `on_shown` showed in the last
+    /// frame, and those last reported, by id.
+    rows_shown: HashMap<FocusId, Range<usize>>,
+    rows_reported: HashMap<FocusId, Range<usize>>,
     /// The cell size the tree was last drawn with.
     metrics: Option<CellMetrics>,
     /// Where each element the app named ([`Element::id`]) inside a
@@ -337,8 +355,33 @@ struct Shape<'a> {
     direction: Direction,
     /// Each child's label, for a form.
     labels: Vec<&'a str>,
+    /// The rows a lazy column holds of all it has, if it is one.
+    lazy: Option<LazyShape>,
     /// Whether it scrolls its children.
     scroll: bool,
+}
+
+/// Which rows of all it has a flattened lazy column holds.
+#[derive(Clone, Copy, Debug)]
+struct LazyShape {
+    /// How many rows it has.
+    count: usize,
+    /// The row the app's cursor is on.
+    cursor: usize,
+    /// The row its first child is.
+    first: usize,
+}
+
+/// What a lazy column keeps between frames.
+#[derive(Clone, Debug, Default)]
+struct LazyState {
+    /// How tall its rows were laid out on average, or zero before any was.
+    average: f32,
+    /// The cursor's row as last drawn, which is scrolled into view when it
+    /// changes.
+    cursor: Option<usize>,
+    /// The rows to build next, those around what shows.
+    rows: Range<usize>,
 }
 
 /// Where an element is laid out, which decides how it is sized.
@@ -416,7 +459,7 @@ impl Store {
         frame: &mut Frame,
         area: Rect,
     ) {
-        let tree = flatten(view, self.scope);
+        let tree = flatten(view, self.scope, &self.lazies);
         self.sync(&tree);
         let flat = &tree.flat;
         let room = Room {
@@ -445,6 +488,7 @@ impl Store {
         self.hits.clear();
         self.access_covered = 0;
         self.laid_out.clear();
+        self.rows_shown.clear();
         self.overs.clear();
         self.popups.clear();
         self.tips.clear();
@@ -691,7 +735,7 @@ impl Store {
             }
         }
         let (route, calls, close, took_key, trap_passes) = {
-            let tree = flatten(host.view(), self.scope);
+            let tree = flatten(host.view(), self.scope, &self.lazies);
             self.sync(&tree);
             let flat = &tree.flat;
             let trap_passes = self.traps.last().is_some_and(|trap| {
@@ -889,7 +933,7 @@ impl Store {
             return (Asks::default(), true);
         }
         let call = {
-            let tree = flatten(host.view(), self.scope);
+            let tree = flatten(host.view(), self.scope, &self.lazies);
             self.sync(&tree);
             let range = self.trapped_range(&tree);
             let entries = &mut self.entries;
@@ -961,10 +1005,16 @@ impl Store {
     ) -> Option<Instant> {
         self.ime.follow(cx, self.caret);
         let due = match self.ticking {
-            true => tick(host, self.scope, cx),
+            true => tick(host, self.scope, &self.lazies, cx),
             false => None,
         };
         self.report_sizes(host, cx);
+        self.report_rows(host, cx);
+        // A lazy column whose rows came short of what shows, or past it,
+        // builds the right ones in another frame.
+        if std::mem::take(&mut self.lazy_again) {
+            cx.request_redraw();
+        }
         let tooltip = Widget::about_to_wait(&mut self.tooltip, cx);
         self.entries
             .values_mut()
@@ -983,7 +1033,7 @@ impl Store {
             return;
         }
         let calls: Vec<Call<H::State>> = {
-            let tree = flatten(host.view(), self.scope);
+            let tree = flatten(host.view(), self.scope, &self.lazies);
             tree.flat
                 .iter()
                 .filter_map(|node| {
@@ -997,6 +1047,36 @@ impl Store {
                 .collect()
         };
         self.reported.clone_from(&self.laid_out);
+        if !calls.is_empty() {
+            cx.request_redraw();
+        }
+        for call in calls {
+            call(host.state());
+        }
+    }
+
+    /// Runs on `app` the `on_shown` of each lazy column the last frame
+    /// showed other rows of than last reported, asking `cx` for a frame
+    /// drawn from what they changed, as [`Store::report_sizes`] does.
+    fn report_rows<H: Host>(&mut self, host: &mut H, cx: &mut EventCx<'_>) {
+        if self.rows_shown == self.rows_reported {
+            return;
+        }
+        let calls: Vec<Call<H::State>> = {
+            let tree = flatten(host.view(), self.scope, &self.lazies);
+            tree.flat
+                .iter()
+                .filter_map(|node| {
+                    let apply = node.extras.as_ref()?.on_rows_shown.as_ref();
+                    let shown = self.rows_shown.get(&node.id)?.clone();
+                    match self.rows_reported.get(&node.id) == Some(&shown) {
+                        true => None,
+                        false => call(apply, shown),
+                    }
+                })
+                .collect()
+        };
+        self.rows_reported.clone_from(&self.rows_shown);
         if !calls.is_empty() {
             cx.request_redraw();
         }
@@ -1565,6 +1645,16 @@ impl Store {
             FlatKind::Split(_) => {
                 return layout::Element::leaf(rooted(base, sizing, place, room)).with_key(index);
             }
+            // A lazy column takes the room left down a column, and the
+            // whole height of a row beside what shares it.
+            FlatKind::Container(shape)
+                if shape.lazy.is_some()
+                    && matches!(place, Place::Column | Place::Row)
+                    && !padded =>
+            {
+                let style = sized(base.with_height(Length::Flex(1.0)), sizing, place, room);
+                return layout::Element::leaf(style).with_key(index);
+            }
             FlatKind::Container(shape) if shape.scroll && place != Place::Content => {
                 return layout::Element::leaf(rooted(base, sizing, place, room)).with_key(index);
             }
@@ -1721,6 +1811,16 @@ impl Store {
             self.named.insert(node.id, (scroll.id, at));
         }
         self.paint_extras(flat, index, rect, frame, theme, scroll);
+        // An element that scrolls itself fills the height its parent
+        // leaves, which a scrolling container leaves unbounded.
+        let scrolls = match &node.kind {
+            FlatKind::Control(control) => control.scrolls_itself(),
+            FlatKind::Container(shape) => shape.lazy.is_some(),
+            FlatKind::Split(_) | FlatKind::Text(_) => false,
+        };
+        if scroll.is_some() && scrolls {
+            frame.note_nested_scroll(|| path(flat, index));
+        }
         match &node.kind {
             FlatKind::Text(text) => {
                 let origin = Point::new(rect.x, rect.y);
@@ -1812,6 +1912,12 @@ impl Store {
                     self.focus.register_hit(node.id, rect);
                 }
             }
+            FlatKind::Container(Shape {
+                lazy: Some(lazy), ..
+            }) => {
+                self.note_regions(flat, index, rect, scroll);
+                self.paint_lazy(flat, index, *lazy, rects, frame, theme, room, reveal);
+            }
             FlatKind::Container(shape) if shape.scroll => {
                 self.note_regions(flat, index, rect, scroll);
                 self.paint_scrolled(flat, index, rects, frame, theme, room, reveal);
@@ -1902,6 +2008,132 @@ impl Store {
             }
         });
         self.focus.leave();
+    }
+
+    /// Draws the lazy column `index` of `flat`, holding the rows `lazy` says
+    /// of all it has, at `rects`: scrolled as its view says, the cursor's row
+    /// brought into view when it moved, its rows laid out from where the
+    /// first sits in all of them and clipped to it. Notes how tall the rows
+    /// were and which to build next, and asks for another frame when they
+    /// are not the ones built.
+    #[allow(clippy::too_many_arguments)]
+    fn paint_lazy<A>(
+        &mut self,
+        flat: &[Flat<'_, A>],
+        index: usize,
+        lazy: LazyShape,
+        rects: &mut Rects,
+        frame: &mut Frame,
+        theme: &Theme,
+        room: Room,
+        reveal: &mut Option<(FocusId, Rect)>,
+    ) {
+        let node = &flat[index];
+        let rect = rects.get(index);
+        let state = self.lazies.entry(node.id).or_default();
+        let average = match state.average > 0.0 {
+            true => state.average,
+            false => (LAZY_FIRST_ROW_CELLS * room.metrics.height).round(),
+        };
+        let moved = state.cursor != Some(lazy.cursor);
+        state.cursor = Some(lazy.cursor);
+        let Some(scroll) = self.scroll_view(node.id) else {
+            return;
+        };
+        scroll.set_content_size(0.0, lazy.count as f32 * average);
+        let viewport = scroll.draw(frame, rect, theme);
+        scroll.access(frame, node.id);
+        // The cursor's row comes into view at once when it moved: a jump
+        // need not build every row it passes.
+        if moved && lazy.count > 0 {
+            let top = lazy.cursor as f32 * average;
+            let offset = scroll.offset().y;
+            let to = if top < offset {
+                Some(top)
+            } else if top + average > offset + viewport.height {
+                Some(top + average - viewport.height)
+            } else {
+                None
+            };
+            if let Some(to) = to {
+                scroll.scroll_to(Point::new(0.0, to));
+            }
+        }
+        let offset = scroll.offset();
+        let origin = Point::new(viewport.x, viewport.y - offset.y);
+        // The rows built sit where the first is among all of them.
+        let top = origin.y + lazy.first as f32 * average;
+        {
+            let content = self.layout_of(flat, index, Place::Content, room);
+            let area = Rect::new(origin.x, top, viewport.width, viewport.height);
+            rects.take(&content.compute(area), flat.len(), Some(index));
+        }
+        self.focus.enter(node.id, viewport);
+        if let Some(order) = node.order {
+            self.focus.set_order(node.id, order);
+        }
+        let context = ScrollContext {
+            id: node.id,
+            origin,
+            viewport,
+        };
+        frame.clipped(viewport, |frame| {
+            for child in &node.children {
+                self.paint(
+                    flat,
+                    *child,
+                    rects,
+                    frame,
+                    theme,
+                    room,
+                    Some(context),
+                    reveal,
+                );
+            }
+        });
+        self.focus.leave();
+        // How tall the rows were, and which show now with a view's worth
+        // more above and below, for a wheel's glide to find built.
+        let heights: Vec<f32> = node
+            .children
+            .iter()
+            .map(|child| rects.get(*child).height)
+            .collect();
+        let state = self.lazies.entry(node.id).or_default();
+        if !heights.is_empty() {
+            state.average = heights.iter().sum::<f32>() / heights.len() as f32;
+        }
+        let average = state.average.max(1.0);
+        let above = (offset.y - viewport.height).max(0.0);
+        let below = offset.y + 2.0 * viewport.height;
+        let first = ((above / average).floor() as usize).min(lazy.count);
+        let end = ((below / average).ceil() as usize).min(lazy.count);
+        let built = lazy.first..lazy.first + node.children.len();
+        // Another frame, where what shows is not all built.
+        let wanted = ((offset.y / average).floor() as usize).min(lazy.count)
+            ..(((offset.y + viewport.height) / average).ceil() as usize).min(lazy.count);
+        if wanted.start < built.start || wanted.end > built.end {
+            self.lazy_again = true;
+        }
+        state.rows = first..end;
+        // The rows on screen, as laid out, for an app that goes by them.
+        if node
+            .extras
+            .as_ref()
+            .is_some_and(|extras| extras.on_rows_shown.is_some())
+        {
+            let bottom = viewport.y + viewport.height;
+            let mut on_screen = node.children.iter().enumerate().filter(|(_, child)| {
+                let row = rects.get(**child);
+                row.y + row.height > viewport.y && row.y < bottom
+            });
+            let shown = match (on_screen.next(), on_screen.next_back()) {
+                (Some((top, _)), Some((last, _))) => lazy.first + top..lazy.first + last + 1,
+                (Some((top, _)), None) => lazy.first + top..lazy.first + top + 1,
+                (None, _) => lazy.first..lazy.first,
+            };
+            self.rows_shown.insert(node.id, shown);
+        }
     }
 
     /// Draws the surface `node` was given under it at `rect`, inside the
@@ -2090,7 +2322,11 @@ impl Rects {
 
 /// The elements of the tree `root`, in reading order, each with its id,
 /// and then each layer's, a layer's own layers after it.
-fn flatten<'a, A>(root: Element<'a, A>, scope: Option<FocusId>) -> Tree<'a, A> {
+fn flatten<'a, A>(
+    root: Element<'a, A>,
+    scope: Option<FocusId>,
+    lazies: &HashMap<FocusId, LazyState>,
+) -> Tree<'a, A> {
     let mut flat = Vec::new();
     let mut pending = VecDeque::new();
     let root_id = scoped(scope, ROOT);
@@ -2104,6 +2340,7 @@ fn flatten<'a, A>(root: Element<'a, A>, scope: Option<FocusId>) -> Tree<'a, A> {
         root_id,
         None,
         scope,
+        lazies,
     );
     let mut layers = Vec::new();
     while let Some(Pending {
@@ -2125,6 +2362,7 @@ fn flatten<'a, A>(root: Element<'a, A>, scope: Option<FocusId>) -> Tree<'a, A> {
             anchor_id,
             None,
             scope,
+            lazies,
         );
         layers.push(Layer {
             end: flat.len(),
@@ -2151,6 +2389,7 @@ fn push_flat<'a, A>(
     parent_id: FocusId,
     name: Option<&'a str>,
     scope: Option<FocusId>,
+    lazies: &HashMap<FocusId, LazyState>,
 ) {
     let id = match &element.id {
         Some(explicit) => scoped(scope, FocusId::new(explicit)),
@@ -2162,10 +2401,12 @@ fn push_flat<'a, A>(
                 chrome_labels: container.chrome_labels,
                 direction: container.direction,
                 labels: container.labels,
+                lazy: None,
                 scroll: container.scroll,
             };
             (FlatKind::Container(shape), container.children)
         }
+        Kind::Lazy(lazy) => lazy_rows(lazy, lazies.get(&id)),
         Kind::Control(control) => (FlatKind::Control(control), Vec::new()),
         Kind::Split(parts) => {
             let shape = SplitShape {
@@ -2207,6 +2448,17 @@ fn push_flat<'a, A>(
             FlatKind::Control(_) | FlatKind::Split(_) | FlatKind::Text(_) => None,
         };
         let name = label.filter(|label| !label.is_empty());
+        // A lazy column's row keeps its id by which row it is, whichever
+        // rows are built around it.
+        let slot = match &flat[me].kind {
+            FlatKind::Container(Shape {
+                lazy: Some(lazy), ..
+            }) => lazy.first + place,
+            FlatKind::Container(_)
+            | FlatKind::Control(_)
+            | FlatKind::Split(_)
+            | FlatKind::Text(_) => place,
+        };
         let child_index = flat.len();
         push_flat(
             flat,
@@ -2214,13 +2466,42 @@ fn push_flat<'a, A>(
             child,
             Some(me),
             place,
-            place as u64,
+            slot as u64,
             id,
             name,
             scope,
+            lazies,
         );
         flat[me].children.push(child_index);
     }
+}
+
+/// The flattened shape of the lazy column `lazy` and the rows it builds:
+/// those `state` says show, or its first rows before it was ever drawn.
+fn lazy_rows<'a, A>(
+    lazy: Lazy<'a, A>,
+    state: Option<&LazyState>,
+) -> (FlatKind<'a, A>, Vec<Element<'a, A>>) {
+    let count = lazy.rows.count();
+    let rows = match state {
+        Some(state) if !state.rows.is_empty() || count == 0 => {
+            state.rows.start.min(count)..state.rows.end.min(count)
+        }
+        _ => 0..count.min(LAZY_FIRST_ROWS),
+    };
+    let shape = Shape {
+        chrome_labels: false,
+        direction: Direction::Column,
+        labels: Vec::new(),
+        lazy: Some(LazyShape {
+            count,
+            cursor: lazy.cursor,
+            first: rows.start,
+        }),
+        scroll: true,
+    };
+    let children = rows.map(|row| lazy.rows.row(row)).collect();
+    (FlatKind::Container(shape), children)
 }
 
 /// `id` as a tree under `scope` has it: `id` itself in a window's own
@@ -2249,10 +2530,15 @@ fn subtree_ids<A>(flat: &[Flat<'_, A>], index: usize) -> HashSet<FocusId> {
 /// Runs on `app` what the elements of its `window` say time changed (the
 /// toasts expiring), asking `cx` for a redraw when anything did; returns
 /// when the next change is due.
-fn tick<H: Host>(host: &mut H, scope: Option<FocusId>, cx: &mut EventCx<'_>) -> Option<Instant> {
+fn tick<H: Host>(
+    host: &mut H,
+    scope: Option<FocusId>,
+    lazies: &HashMap<FocusId, LazyState>,
+    cx: &mut EventCx<'_>,
+) -> Option<Instant> {
     let now = clock::now();
     let (calls, due) = {
-        let tree = flatten(host.view(), scope);
+        let tree = flatten(host.view(), scope, lazies);
         let mut calls: Vec<Call<H::State>> = Vec::new();
         let mut due = None;
         for node in &tree.flat {

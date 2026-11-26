@@ -88,6 +88,12 @@ pub struct Frame {
     /// press, and so are no button to a screen reader.
     #[cfg(any(test, feature = "testing"))]
     pub(crate) pressables: Vec<(Rect, String, bool)>,
+    /// Every element that scrolls itself drawn inside a scrolling
+    /// container, which leaves it no height to fill, by its kind and
+    /// place, for a test to assert there are none
+    /// ([`crate::testing::nested_scrolls`]).
+    #[cfg(any(test, feature = "testing"))]
+    pub(crate) nested_scrolls: Vec<String>,
     /// Whether widgets cut their animations short.
     reduced_motion: bool,
     /// The family and size the cell grid's glyphs are drawn in beyond the
@@ -130,6 +136,8 @@ impl Frame {
             overlay: DrawList::default(),
             #[cfg(any(test, feature = "testing"))]
             pressables: Vec::new(),
+            #[cfg(any(test, feature = "testing"))]
+            nested_scrolls: Vec::new(),
             reduced_motion: false,
             run_style: RunStyle::default(),
             scale_factor,
@@ -199,6 +207,14 @@ impl Frame {
     /// Closes the node [`Frame::enter_access`] opened last.
     pub fn leave_access(&mut self) {
         self.access.leave();
+    }
+
+    /// Note that the element `name` names scrolls itself inside a
+    /// scrolling container, for a test to find; nothing outside tests.
+    #[cfg_attr(not(any(test, feature = "testing")), allow(unused_variables))]
+    pub(crate) fn note_nested_scroll(&mut self, name: impl FnOnce() -> String) {
+        #[cfg(any(test, feature = "testing"))]
+        self.nested_scrolls.push(name());
     }
 
     /// How many screen reader nodes this frame described so far.

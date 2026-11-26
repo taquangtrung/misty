@@ -98,6 +98,7 @@ pub(crate) mod element;
 pub(crate) mod embed;
 pub(crate) mod fields;
 pub(crate) mod host;
+pub(crate) mod lazy;
 pub(crate) mod node;
 pub(crate) mod page;
 pub(crate) mod pick;
@@ -122,9 +123,10 @@ pub use data::{Cells, Grid, List, Table, Tree, cells, icon_grid, list, table, tr
 pub use element::{Field, MenuRequest, Overlay, Text, column, field, form, overlay, row, text};
 pub use embed::{HostedView, ScrollStep, ViewHost};
 pub use fields::{ColorField, KeyCapture, NamesField, color_field, key_capture, names_field};
+pub use lazy::{LazyColumn, LazySource, lazy_column};
 pub use page::{
-    Item, Page, Section, SectionHeader, badge, divider, grid, item, keycap, page,
-    proportional_keycap, section, section_header, sidebar, vertical_divider,
+    FilledPage, Item, Page, ScrollingPage, Section, SectionHeader, badge, divider, grid, item,
+    keycap, page, proportional_keycap, section, section_header, sidebar, vertical_divider,
 };
 pub use pick::{QuickPick, quick_pick};
 pub use popups::{

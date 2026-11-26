@@ -229,6 +229,13 @@ pub(crate) trait Spec<A> {
         false
     }
 
+    /// Whether the element scrolls what it shows itself, as a list or a
+    /// table does, and so has nothing to fill inside a scrolling container
+    /// ([`nested_scrolls`](crate::testing::nested_scrolls)).
+    fn scrolls_itself(&self) -> bool {
+        false
+    }
+
     /// Whether the element takes the keyboard; a progress bar does not.
     fn is_focusable(&self) -> bool {
         true
@@ -326,6 +333,9 @@ pub(crate) trait Node<A> {
 
     /// Whether the element takes the height its parent leaves.
     fn grows(&self) -> bool;
+
+    /// Whether the element scrolls what it shows itself.
+    fn scrolls_itself(&self) -> bool;
 
     /// Whether `widget` is of the type this element keeps.
     fn owns(&self, widget: &dyn Stored) -> bool;
@@ -439,6 +449,10 @@ impl<A, S: Spec<A>> Node<A> for S {
 
     fn grows(&self) -> bool {
         Spec::grows(self)
+    }
+
+    fn scrolls_itself(&self) -> bool {
+        Spec::scrolls_itself(self)
     }
 
     fn owns(&self, widget: &dyn Stored) -> bool {

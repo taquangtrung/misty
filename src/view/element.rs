@@ -18,6 +18,7 @@ use super::super::input::event::WheelInput;
 use super::super::render::layout::{Align, Justify};
 use super::super::widgets::drag::FileDropped;
 use super::controls::Callback;
+use super::lazy::LazySource;
 use super::node::Node;
 use super::props::{
     Corners, DragSource, DropTarget, ElementSize, Extent, Extras, PointerDrag, Press, Space,
@@ -102,8 +103,20 @@ pub(crate) enum Kind<'a, A> {
     /// Two elements side by side or one above the other, a divider
     /// between them.
     Split(SplitParts<'a, A>),
+    /// Rows built as they come into view: only those that show are
+    /// made, from the app's builder.
+    Lazy(Lazy<'a, A>),
     /// A line of text.
     Text(Text<'a>),
+}
+
+/// Rows a [`lazy_column`](super::lazy_column) builds as they come into
+/// view.
+pub(crate) struct Lazy<'a, A> {
+    /// The row the app's cursor is on, scrolled into view when it moves.
+    pub(crate) cursor: usize,
+    /// What builds the rows, asked only for those that show.
+    pub(crate) rows: &'a dyn LazySource<A>,
 }
 
 /// Two elements sharing an area, as a split element holds them.
@@ -656,7 +669,7 @@ impl<'a, A> Element<'a, A> {
     }
 
     /// The element's extra properties, made empty the first time.
-    fn extras(&mut self) -> &mut Extras<'a, A> {
+    pub(crate) fn extras(&mut self) -> &mut Extras<'a, A> {
         self.extras.get_or_insert_with(Box::default)
     }
 

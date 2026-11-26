@@ -15,6 +15,7 @@
 
 use std::any::Any;
 use std::borrow::Cow;
+use std::ops::Range;
 use std::rc::Rc;
 
 use super::super::base::geometry::{Point, Rect};
@@ -162,6 +163,8 @@ pub(crate) struct Extras<'a, A> {
     pub(crate) on_press: Option<Callback<A, Press>>,
     /// What a turn of the wheel over it runs.
     pub(crate) on_scroll: Option<Callback<A, WheelInput>>,
+    /// What a lazy column showing other rows than last reported runs.
+    pub(crate) on_rows_shown: Option<Callback<A, Range<usize>>>,
     /// What being laid out at another size than last reported runs.
     pub(crate) on_size_change: Option<Callback<A, ElementSize>>,
     /// How it is sized and spaced.
@@ -356,6 +359,7 @@ impl<A> Default for Extras<'_, A> {
             on_pointer_press: None,
             on_press: None,
             on_scroll: None,
+            on_rows_shown: None,
             on_size_change: None,
             sizing: Sizing::default(),
             surface: Surface::default(),

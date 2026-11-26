@@ -379,6 +379,16 @@ pub fn unnamed_controls(frame: &Frame) -> Vec<String> {
         .collect()
 }
 
+/// The elements `frame` drew that scroll themselves (a
+/// [`lazy_column`](crate::view::lazy_column), a [`list`](crate::view::list),
+/// a [`table`](crate::view::table)) inside a scrolling container, which
+/// leaves them no height to fill: each by its kind and place in the tree,
+/// for a test to assert there are none. Such an element goes in a
+/// [`Page::filled`](crate::view::Page::filled) page, not a scrolling one.
+pub fn nested_scrolls(frame: &Frame) -> Vec<String> {
+    frame.nested_scrolls.clone()
+}
+
 /// The controls `draw` draws of `state` that the pointer does not light:
 /// each control [`unnamed_controls`] would look at, and each region that
 /// takes only the pointer's press, is hovered in turn,

@@ -468,9 +468,7 @@ impl<'a, A: 'static> From<SettingsPage<'a, A>> for Element<'a, A> {
                 apply(app, at);
             }
         };
-        let mut shown = page(settings.title)
-            .sidebar(sidebar(entries, settings.shown, choose))
-            .content(super::element::column(settings.cards()));
+        let mut shown = page(settings.title).sidebar(sidebar(entries, settings.shown, choose));
         if let Some((names, scope, apply)) = &settings.scopes {
             let apply = Rc::clone(apply);
             shown = shown.scopes(names.iter().map(String::as_str), *scope, move |app, at| {
@@ -484,7 +482,9 @@ impl<'a, A: 'static> From<SettingsPage<'a, A>> for Element<'a, A> {
                 .on_change(move |app, filter| apply(app, filter));
             shown = shown.action(Element::from(field).id(SettingsPage::<A>::FILTER_ID));
         }
-        shown.into()
+        shown
+            .scrolling(super::element::column(settings.cards()))
+            .into()
     }
 }
 

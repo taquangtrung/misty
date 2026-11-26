@@ -548,6 +548,10 @@ impl<A: 'static, S: ListSource + ?Sized> Spec<A> for List<'_, A, S> {
     fn grows(&self) -> bool {
         true
     }
+
+    fn scrolls_itself(&self) -> bool {
+        true
+    }
 }
 
 impl<'a, A: 'static, S: ListSource + ?Sized> From<List<'a, A, S>> for Element<'a, A> {
@@ -861,6 +865,10 @@ impl<A: 'static, S: TableSource + ?Sized> Spec<A> for Table<'_, A, S> {
     fn grows(&self) -> bool {
         true
     }
+
+    fn scrolls_itself(&self) -> bool {
+        true
+    }
 }
 
 impl<'a, A: 'static, S: TableSource + ?Sized> From<Table<'a, A, S>> for Element<'a, A> {
@@ -1145,6 +1153,10 @@ impl<A: 'static, K: Clone + Eq + Hash + 'static> Spec<A> for Tree<'_, A, K> {
     fn grows(&self) -> bool {
         true
     }
+
+    fn scrolls_itself(&self) -> bool {
+        true
+    }
 }
 
 impl<'a, A: 'static, K: Clone + Eq + Hash + 'static> From<Tree<'a, A, K>> for Element<'a, A> {
@@ -1339,6 +1351,10 @@ impl<A: 'static, S: GridSource + ?Sized> Spec<A> for Grid<'_, A, S> {
     }
 
     fn grows(&self) -> bool {
+        true
+    }
+
+    fn scrolls_itself(&self) -> bool {
         true
     }
 }
