@@ -195,6 +195,7 @@ pub use base::notice::{
 pub use base::paint::{GradientStop, LineCap, LineJoin, LinearGradient, Paint, Stroke};
 pub use base::palette::{ANSI_COLORS, PALETTE_SIZE, Palette};
 pub use base::path::{FillRule, VectorPath, VectorPathBuilder};
+pub use base::spinner;
 pub use base::scroll::SmoothScroll;
 pub use base::scrollbar::{ScrollbarFade, ScrollbarShow};
 pub use base::split::{

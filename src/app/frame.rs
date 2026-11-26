@@ -5,6 +5,7 @@
 //! [`Application::render`]: crate::Application::render
 
 use std::sync::{Arc, Mutex, PoisonError};
+use std::time::Instant;
 
 use accesskit::Node;
 
@@ -14,6 +15,7 @@ use super::super::base::color::{Rgb, Rgba};
 use super::super::base::geometry::{Point, Rect};
 use super::super::base::paint::{LineCap, Paint, Stroke};
 use super::super::base::path::VectorPath;
+use super::super::base::spinner;
 use super::super::base::styled::{FontFamily, StyledText};
 use super::super::base::theme::Theme;
 use super::super::base::transform::Transform;
@@ -261,6 +263,20 @@ impl Frame {
         };
         let font = (self.metrics, self.run_style.clone());
         lay_out_line(&[run], origin, font, None, self.target());
+    }
+
+    /// Draws the spinner started at `epoch` in `color`, its glyph from the
+    /// window's font centered across `square` on the line starting at `top`,
+    /// as busy work wears it wherever it shows: held on its first frame where
+    /// motion is reduced.
+    pub fn draw_spinner(&mut self, epoch: Instant, square: Rect, top: f32, color: Rgb) {
+        let now = match self.reduced_motion() {
+            true => epoch,
+            false => Instant::now(),
+        };
+        let glyph = spinner::glyph_at(epoch, now).to_string();
+        let x = (square.x + (square.width - self.metrics.width) / 2.0).round();
+        self.draw_plain_text(&glyph, Point::new(x, top), color);
     }
 
     /// The whole window, at 0, 0 and as large as the window, in physical

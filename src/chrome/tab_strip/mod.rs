@@ -1009,16 +1009,9 @@ impl TabStrip {
     /// Draws the spinner's glyph centered across `square`, on the title's
     /// line, which starts at `top`.
     fn draw_spinner(&self, frame: &mut Frame, square: Rect, top: f32, color: Rgb) {
-        let Some(epoch) = self.spinner_epoch else {
-            return;
-        };
-        let now = match frame.reduced_motion() {
-            true => epoch,
-            false => Instant::now(),
-        };
-        let glyph = spinner::glyph_at(epoch, now).to_string();
-        let x = (square.x + (square.width - frame.cell_metrics().width) / 2.0).round();
-        frame.draw_plain_text(&glyph, Point::new(x, top), color);
+        if let Some(epoch) = self.spinner_epoch {
+            frame.draw_spinner(epoch, square, top, color);
+        }
     }
 
     /// Draws the strip's action buttons: prev/next when overflowing, then new-tab.

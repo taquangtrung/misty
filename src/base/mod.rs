@@ -30,7 +30,7 @@ pub(crate) mod palette;
 pub(crate) mod path;
 pub(crate) mod scroll;
 pub(crate) mod scrollbar;
-pub(crate) mod spinner;
+pub mod spinner;
 pub(crate) mod split;
 pub(crate) mod strings;
 pub(crate) mod styled;

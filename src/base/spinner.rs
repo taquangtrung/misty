@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 // ========================================================================
 
 /// How long one frame of the spinner shows.
-pub(crate) const FRAME: Duration = Duration::from_millis(80);
+pub const FRAME: Duration = Duration::from_millis(80);
 
 /// The spinner's frames, three braille dots circling their cell.
 const FRAMES: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
@@ -19,12 +19,12 @@ const FRAMES: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '�
 // ========================================================================
 
 /// The glyph a spinner started at `epoch` shows at `now`.
-pub(crate) fn glyph_at(epoch: Instant, now: Instant) -> char {
+pub fn glyph_at(epoch: Instant, now: Instant) -> char {
     FRAMES[frame_at(now.saturating_duration_since(epoch)) % FRAMES.len()]
 }
 
 /// When a spinner started at `epoch` next turns after `now`.
-pub(crate) fn next_turn(epoch: Instant, now: Instant) -> Instant {
+pub fn next_turn(epoch: Instant, now: Instant) -> Instant {
     let frames = frame_at(now.saturating_duration_since(epoch)) as u32;
     epoch + FRAME * (frames + 1)
 }
