@@ -207,12 +207,18 @@ impl Font {
 // FaceWeights Implementations
 // ========================================================================
 
+impl FaceWeights {
+    /// Regular and bold, as a font is drawn unless
+    /// [`Font::with_weights`] says otherwise.
+    pub(crate) const DEFAULT: Self = Self {
+        bold: DEFAULT_BOLD_WEIGHT,
+        normal: DEFAULT_WEIGHT,
+    };
+}
+
 impl Default for FaceWeights {
     fn default() -> Self {
-        Self {
-            bold: DEFAULT_BOLD_WEIGHT,
-            normal: DEFAULT_WEIGHT,
-        }
+        Self::DEFAULT
     }
 }
 

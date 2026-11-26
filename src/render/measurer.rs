@@ -93,6 +93,7 @@ impl ParagraphMeasurer {
             line_height: font.cell_metrics(scale_factor).height,
             scale_factor: scale_factor as f32,
             size: font.physical_size(scale_factor),
+            weights: font.weights(),
         })
     }
 

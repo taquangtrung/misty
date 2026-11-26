@@ -377,6 +377,7 @@ impl<A: Application> Runtime<A> {
             open.metrics,
             Arc::clone(&shared.fonts),
             open.font.physical_size(scale_factor),
+            open.font.weights(),
         );
         frame.set_maximized(open.maximized);
         // Rounded only while its edges float on the desktop, and only where

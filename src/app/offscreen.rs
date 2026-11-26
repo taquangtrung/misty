@@ -21,7 +21,7 @@ use wgpu::{
 
 use super::super::base::color::Rgb;
 use super::super::base::geometry::Rect;
-use super::super::render::font::{CellMetrics, Font};
+use super::super::render::font::{CellMetrics, FaceWeights, Font};
 use super::super::render::gpu::{Gpu, GpuContext};
 use super::super::render::{Fonts, FrameTarget, Renderer, ShapingFont};
 use super::frame::Frame;
@@ -141,6 +141,7 @@ impl Harness {
             self.metrics,
             Arc::clone(&self.fonts),
             self.font.physical_size(SCALE_FACTOR),
+            self.font.weights(),
         )
     }
 
@@ -321,6 +322,7 @@ pub(crate) fn plain_frame(width: u32, height: u32) -> Frame {
         metrics,
         fonts,
         Font::default().physical_size(SCALE_FACTOR),
+        FaceWeights::DEFAULT,
     )
 }
 

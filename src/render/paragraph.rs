@@ -249,6 +249,8 @@ pub(crate) struct ParagraphKey {
     runs: Vec<TextRun>,
     /// The font size's bits.
     size: u32,
+    /// The weights of its regular and bold text.
+    weights: FaceWeights,
     /// The width's bits.
     width: u32,
 }
@@ -345,6 +347,9 @@ pub(crate) struct ParagraphFont {
     pub(crate) scale_factor: f32,
     /// The font size, in pixels.
     pub(crate) size: f32,
+    /// The weights of its regular and bold text: the window font's, so a
+    /// page's words are as light or heavy as its cells.
+    pub(crate) weights: FaceWeights,
 }
 
 // ========================================================================
@@ -816,6 +821,7 @@ impl ParagraphKey {
             multiple: query.paragraph.line_height,
             runs: query.paragraph.runs(None, query.font),
             size: query.font.size.to_bits(),
+            weights: query.font.weights,
             width: query.width.to_bits(),
         }
     }
@@ -827,6 +833,7 @@ impl ParagraphKey {
             && key.multiple == query.paragraph.line_height
             && key.line_height == query.font.line_height.to_bits()
             && key.size == query.font.size.to_bits()
+            && key.weights == query.font.weights
             && key.width == query.width.to_bits()
             && key.runs.len() == spans.len()
             && key.runs.iter().zip(spans).all(|(run, span)| {
@@ -901,7 +908,7 @@ impl ParagraphQuery<'_> {
             &runs,
             Some(self.wrapping()),
             true,
-            FaceWeights::default(),
+            self.font.weights,
         );
         let groups = buffer
             .layout_runs()
@@ -1342,15 +1349,7 @@ pub(crate) fn render_alone(
     }
     let metrics = Metrics::new(font.size, font.line_height);
     let wrap = Some(query.wrapping());
-    let mut buffer = shape_text(
-        font_system,
-        metrics,
-        None,
-        &runs,
-        wrap,
-        true,
-        FaceWeights::default(),
-    );
+    let mut buffer = shape_text(font_system, metrics, None, &runs, wrap, true, font.weights);
     let foreground = theme.foreground;
     let default = Color::rgb(foreground.r, foreground.g, foreground.b);
     buffer.draw(font_system, swash_cache, default, |x, y, w, h, color| {
@@ -1412,7 +1411,7 @@ fn render_indented(
             &runs,
             Some(wrap),
             true,
-            FaceWeights::default(),
+            font.weights,
         );
         buffer.draw(font_system, swash_cache, default, |x, y, w, h, color| {
             if cut.is_some_and(|cut| y as f32 >= cut) {
@@ -1658,6 +1657,7 @@ mod tests {
         line_height: 20.0,
         scale_factor: 1.0,
         size: 15.0,
+        weights: FaceWeights::DEFAULT,
     };
 
     const TEXT: TextColor = TextColor::Token(ThemeToken::Foreground);

@@ -23,7 +23,7 @@ use super::super::render::Fonts;
 use super::super::render::draw::{
     DrawList, DrawMarks, DrawPhases, Face, PathDraw, PictureDraw, PictureSource, Quad, RunStyle,
 };
-use super::super::render::font::{CellMetrics, Font};
+use super::super::render::font::{CellMetrics, FaceWeights, Font};
 use super::super::render::grid::lay_out_cells;
 use super::super::render::image::{IconSet, Image, ImageDraw, Svg};
 use super::super::render::measurer::ParagraphMeasurer;
@@ -74,6 +74,9 @@ pub struct Frame {
     /// The size of the window's font in physical pixels, which
     /// paragraphs are drawn at.
     font_size: f32,
+    /// The weights of the window font's regular and bold text, which
+    /// paragraphs are drawn in.
+    font_weights: FaceWeights,
     /// The fonts every window shares, for measuring paragraphs.
     fonts: Arc<Mutex<Fonts>>,
     /// Whether drawing goes to the overlay rather than the base layer.
@@ -123,6 +126,7 @@ impl Frame {
         metrics: CellMetrics,
         fonts: Arc<Mutex<Fonts>>,
         font_size: f32,
+        font_weights: FaceWeights,
     ) -> Self {
         Self {
             access: AccessTree::default(),
@@ -131,6 +135,7 @@ impl Frame {
             corner_radius: 0.0,
             draw: DrawList::default(),
             font_size,
+            font_weights,
             fonts,
             in_overlay: false,
             maximized: false,
@@ -549,12 +554,13 @@ impl Frame {
     }
 
     /// The proportional font paragraphs are drawn in: the window font's
-    /// size and line height.
+    /// size, line height, and weights.
     pub(crate) fn paragraph_font(&self) -> ParagraphFont {
         ParagraphFont {
             line_height: self.metrics.height,
             scale_factor: self.scale_factor as f32,
             size: self.font_size,
+            weights: self.font_weights,
         }
     }
 

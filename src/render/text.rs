@@ -550,9 +550,9 @@ pub(crate) fn shape_text(
     ligatures: bool,
     weights: FaceWeights,
 ) -> Buffer {
-    // A wrapped paragraph is in the proportional family, whose weights
-    // are its own; the grid font's weights are for the grid font's text.
-    // Its icon glyphs stay in the grid font, where an app keeps them.
+    // A wrapped paragraph is in the proportional family, in the weights
+    // it was given, so a light grid font gives light paragraphs too. Its
+    // icon glyphs stay in the grid font, where an app keeps them.
     // A paragraph's own line height is a multiple of its font size; each
     // run's line then scales from it as it does from the font's own.
     let metrics = match wrap.and_then(|wrap| wrap.line_height) {
@@ -563,9 +563,9 @@ pub(crate) fn shape_text(
         None => metrics,
     };
     let grid_family = family_of(family);
-    let (family, weights) = match wrap {
-        Some(_) => (Family::SansSerif, FaceWeights::default()),
-        None => (grid_family, weights),
+    let family = match wrap {
+        Some(_) => Family::SansSerif,
+        None => grid_family,
     };
     let mut buffer = Buffer::new(font_system, metrics);
     // No alignment sets each line against its own start edge: the left in
@@ -954,6 +954,38 @@ mod tests {
         let bold = face_attrs(Attrs::new(), bold, weights);
         assert_eq!(regular.weight, Weight(300));
         assert_eq!(bold.weight, Weight(500));
+    }
+
+    #[test]
+    fn test_a_wrapped_paragraph_is_shaped_in_the_weights_it_is_given() {
+        // A paragraph was set regular whatever the window font's weight,
+        // so a page's words read heavier than a light grid's cells.
+        let light = FaceWeights {
+            bold: 500,
+            normal: 300,
+        };
+        let runs = [TextRun {
+            color: Rgb::new(0, 0, 0),
+            face: Face::default(),
+            style: RunStyle::default(),
+            text: "light".to_owned(),
+        }];
+        let wrap = Wrapping {
+            align: TextAlign::Start,
+            line_height: None,
+            width: 200.0,
+        };
+        let buffer = shape_text(
+            &mut Fonts::new().font_system,
+            TEST_METRICS,
+            None,
+            &runs,
+            Some(wrap),
+            true,
+            light,
+        );
+        let attrs = buffer.lines[0].attrs_list().get_span(0);
+        assert_eq!(attrs.weight, Weight(300));
     }
 
     #[test]
