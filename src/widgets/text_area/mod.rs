@@ -38,7 +38,7 @@
 //! Home and End, the selection, pointer presses, and horizontal scrolling
 //! follow the glyphs through the paragraph's layout; rows stay a line
 //! tall. The choice is the area's, not the theme's
-//! [`ChromeText`](crate::ChromeText).
+//! [`LabelFont`](crate::LabelFont).
 
 mod wrap;
 

@@ -1,8 +1,8 @@
-//! The chrome around a window's content as elements: [`title_bar`], the
+//! The bars around a window's content as elements: [`title_bar`], the
 //! bar a frameless window draws in place of the system's; [`tab_strip`],
 //! a row of the app's [`tab`]s; [`split`], two elements sharing an area
 //! beside a divider the user drags; and [`status_bar`], the line along
-//! the window's bottom. Each wraps the chrome widget of the same name,
+//! the window's bottom. Each wraps the widget of the same name,
 //! keeping its view state (the hover, a tab or a divider being dragged,
 //! the window buttons pressed) in misty's store, while what it shows
 //! comes from the app's state, and what the user does reaches the app
@@ -25,17 +25,17 @@ use super::super::base::notice::Notifier;
 use super::super::base::spinner;
 use super::super::base::split::{Axis, SplitId, SplitTree};
 use super::super::base::theme::Theme;
-use super::super::chrome::split_view::{SplitView, SplitViewResponse};
-use super::super::chrome::status_bar::{self, StatusBarResponse, StatusLine};
-use super::super::chrome::tab_strip::{self, TabDrag, TabId, TabStripHit, TabStripResponse};
-use super::super::chrome::title_bar::{
-    self, FIRST_APP_BUTTON_NODE, TitleAlign, TitleBarButton, TitleBarResponse, WindowButtons,
-};
 use super::super::input::event::{Input, PointerButton};
 use super::super::render::font::CellMetrics;
 use super::super::render::icon::{logical, outline};
 use super::super::render::image::IconSet;
 use super::super::widgets::drag::Dropped;
+use super::super::widgets::split_view::{SplitView, SplitViewResponse};
+use super::super::widgets::status_bar::{self, StatusBarResponse, StatusLine};
+use super::super::widgets::tab_strip::{self, TabDrag, TabId, TabStripHit, TabStripResponse};
+use super::super::widgets::title_bar::{
+    self, FIRST_APP_BUTTON_NODE, TitleAlign, TitleBarButton, TitleBarResponse, WindowButtons,
+};
 use super::controls::{Callback, call};
 use super::element::{Element, Kind, MenuRequest, SplitParts};
 use super::node::{Call, ControlDrag, Drawn, MovingDrag, Spec};
@@ -1559,13 +1559,13 @@ mod tests {
     use crate::app::context::WindowAction;
     use crate::base::styled::StyledText;
     use crate::base::theme::ThemeToken;
-    use crate::chrome::status_bar::StatusSegment;
     use crate::platform::resize::ResizeEdge;
     use crate::platform::window_id::WindowId;
     use crate::testing::{TestWindow, TreeWindow, ui_text};
     use crate::view::app::App;
     use crate::view::controls::button;
     use crate::view::element::{Element, column, row, text};
+    use crate::widgets::status_bar::StatusSegment;
 
     /// The window's width in the tests, in physical pixels.
     const WIDTH: u32 = 800;
@@ -1574,7 +1574,7 @@ mod tests {
     const HEIGHT: u32 = 400;
 
     /// The window's title.
-    const TITLE: &str = "chrome";
+    const TITLE: &str = "bars";
 
     /// The menubar's titles.
     const MENUS: [&str; 2] = ["File", "Edit"];
@@ -2053,7 +2053,7 @@ mod tests {
     }
 
     #[test]
-    fn test_the_chrome_describes_itself_as_the_hand_driven_widgets_do() {
+    fn test_the_bars_describe_themselves_as_the_hand_driven_widgets_do() {
         let theme = Theme::dark();
         let line = StatusLine::new(plain("ready"));
         let test = TestWindow::new(WIDTH, HEIGHT);

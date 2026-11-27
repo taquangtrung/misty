@@ -78,7 +78,7 @@ use super::super::widgets::popup::draw_backdrop;
 use super::super::widgets::scroll_view::ScrollView;
 use super::super::widgets::tooltip::Tooltip;
 use super::app::{App, AppCx, Asks};
-use super::chrome::SplitBox;
+use super::bars::SplitBox;
 use super::controls::{Callback, call};
 use super::element::{Direction, Element, Kind, Lazy, MenuRequest, Overlay, Text};
 use super::embed::ScrollStep;
@@ -356,8 +356,8 @@ struct SplitShape<A> {
 struct Shape<'a> {
     /// Whether a scrollbar inside it may run in its right padding.
     bars_in_padding: bool,
-    /// Whether a form sets its labels in the theme's chrome font.
-    chrome_labels: bool,
+    /// Whether a form sets its labels in the theme's label font.
+    label_font: bool,
     /// The direction.
     direction: Direction,
     /// Each child's label, for a form.
@@ -1561,7 +1561,7 @@ impl Store {
                     Some(frame.paragraph_width(&styled_paragraph(&text.styled(theme.emphasis))))
                 }
                 FlatKind::Control(control) => control.natural_width(frame, theme),
-                FlatKind::Container(shape) if shape.chrome_labels => shape
+                FlatKind::Container(shape) if shape.label_font => shape
                     .labels
                     .iter()
                     .map(|label| label::label_width(frame, theme, label))
@@ -1576,10 +1576,10 @@ impl Store {
 
     /// How wide the label column of the form `shape`, element `index`, is
     /// with `metrics`: its widest label and the gap after it, the labels
-    /// measured as chrome in [`Store::measure_widths`] when it sets them
+    /// measured as labels in [`Store::measure_widths`] when it sets them
     /// so, else on the cell grid.
     fn label_width(&self, index: usize, shape: &Shape<'_>, metrics: CellMetrics) -> f32 {
-        match shape.chrome_labels {
+        match shape.label_font {
             true => {
                 let widest = self.widths.get(&index).copied().unwrap_or(0.0);
                 (widest + LABEL_GAP * metrics.width).ceil()
@@ -1967,7 +1967,7 @@ impl Store {
                 for (place, child) in node.children.iter().enumerate() {
                     if let Some(label) = shape.labels.get(place) {
                         let row = rects.get(flat.len() + child);
-                        draw_label(frame, label, row, (width, shape.chrome_labels), theme);
+                        draw_label(frame, label, row, (width, shape.label_font), theme);
                     }
                     self.paint(flat, *child, rects, frame, theme, room, scroll, reveal);
                 }
@@ -2039,7 +2039,7 @@ impl Store {
             for (place, child) in node.children.iter().enumerate() {
                 if let Some(label) = shape.labels.get(place) {
                     let row = rects.get(flat.len() + child);
-                    draw_label(frame, label, row, (width, shape.chrome_labels), theme);
+                    draw_label(frame, label, row, (width, shape.label_font), theme);
                 }
                 self.paint(
                     flat,
@@ -2452,7 +2452,7 @@ fn push_flat<'a, A>(
         Kind::Container(container) => {
             let shape = Shape {
                 bars_in_padding: container.bars_in_padding,
-                chrome_labels: container.chrome_labels,
+                label_font: container.label_font,
                 direction: container.direction,
                 labels: container.labels,
                 lazy: None,
@@ -2545,7 +2545,7 @@ fn lazy_rows<'a, A>(
     };
     let shape = Shape {
         bars_in_padding: false,
-        chrome_labels: false,
+        label_font: false,
         direction: Direction::Column,
         labels: Vec::new(),
         lazy: Some(LazyShape {
@@ -2696,13 +2696,13 @@ fn cell_label_width(shape: &Shape<'_>, metrics: CellMetrics) -> f32 {
 }
 
 /// Draws a form's `label`, muted, at the left of its `row`, `width` wide,
-/// centered on the row's height: as chrome when `chrome`, else on the
-/// cell grid.
+/// centered on the row's height: in the label font when `in_label_font`, else
+/// on the cell grid.
 fn draw_label(
     frame: &mut Frame,
     label: &str,
     row: Rect,
-    (width, chrome): (f32, bool),
+    (width, in_label_font): (f32, bool),
     theme: &Theme,
 ) {
     if label.is_empty() {
@@ -2711,7 +2711,7 @@ fn draw_label(
     let metrics = frame.cell_metrics();
     let y = (row.y + (row.height - metrics.height) / 2.0).round();
     let clip = Rect::new(row.x, y, width, metrics.height);
-    if chrome {
+    if in_label_font {
         frame.clipped(clip, |frame| {
             label::draw_label(frame, theme, label, Point::new(row.x, y), theme.muted);
         });
@@ -2994,11 +2994,10 @@ mod tests {
     use super::*;
     use crate::base::key::{Key, KeyCode, Mods};
     use crate::base::notice::{Notice, Notifier, Severity};
-    use crate::chrome::title_bar::TitleBarButton;
     use crate::input::event::{ButtonInput, PointerButton};
     use crate::render::paragraph::Paragraph;
     use crate::testing::{TreeWindow, access_tree};
-    use crate::view::chrome::{split, tab, tab_strip, title_bar};
+    use crate::view::bars::{split, tab, tab_strip, title_bar};
     use crate::view::controls::{button, checkbox, icon_button, progress, slider, text_field};
     use crate::view::custom::canvas;
     use crate::view::data::list;
@@ -3008,6 +3007,7 @@ mod tests {
     use crate::widgets::list_view::ListSource;
     use crate::widgets::menu::{MenuEntry, MenuItem};
     use crate::widgets::number_range::NumberRange;
+    use crate::widgets::title_bar::TitleBarButton;
     use crate::widgets::which_key::WhichKeyEntry;
 
     /// The values the probe's slider takes.
@@ -3870,20 +3870,21 @@ mod tests {
     }
 
     #[test]
-    fn test_a_form_sets_its_labels_as_chrome_only_when_asked_and_sizes_the_column_to_them() {
+    fn test_a_form_sets_its_labels_in_the_label_font_only_when_asked_and_sizes_the_column_to_them()
+    {
         let plain = window(200, |probe| {
             column([form([field("Name", name_field(probe))])])
         });
-        let chrome = window(200, |probe| {
-            column([form([field("Name", name_field(probe))]).chrome_labels()])
+        let in_label_font = window(200, |probe| {
+            column([form([field("Name", name_field(probe))]).label_font()])
         });
         assert!(
             !shaped(&plain).iter().any(|text| text == "Name"),
             "on the grid"
         );
         assert!(
-            shaped(&chrome).iter().any(|text| text == "Name"),
-            "as chrome"
+            shaped(&in_label_font).iter().any(|text| text == "Name"),
+            "in the label font"
         );
         let field_x = |window: &TreeWindow<Probe>| {
             let tree = access_tree(window.frame(), "t");
@@ -3900,7 +3901,11 @@ mod tests {
             f64::from((4.0 + LABEL_GAP) * metrics.width),
             "four cells and the gap"
         );
-        assert_ne!(field_x(&chrome), field_x(&plain), "measured in the UI font");
+        assert_ne!(
+            field_x(&in_label_font),
+            field_x(&plain),
+            "measured in the UI font"
+        );
     }
 
     #[test]

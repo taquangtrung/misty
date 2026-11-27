@@ -54,7 +54,7 @@ use super::super::base::spinner;
 use super::super::base::strings;
 use super::super::base::styled::{Span, StyledText};
 use super::super::base::text;
-use super::super::base::theme::{ChromeText, Theme, ThemeToken};
+use super::super::base::theme::{LabelFont, Theme, ThemeToken};
 use super::super::input::event::{Input, PointerButton};
 use super::super::render::font::CellMetrics;
 use super::super::render::icon::logical;
@@ -72,7 +72,7 @@ const PADDING_Y: f32 = 3.0;
 /// The thickness of the line along the bar's top, in logical pixels.
 const STROKE: f32 = 1.0;
 
-/// Upward optical shift for proportional chrome text inside a cell-height
+/// Upward optical shift for proportional label text inside a cell-height
 /// line, in logical pixels: sans-serif ascent+descent sits slightly low.
 const PROPORTIONAL_OPTICAL_SHIFT: f32 = 1.0;
 
@@ -119,7 +119,7 @@ const STALE_ICON_OPACITY: f32 = 0.5;
 /// pointer input for its clickable segments.
 #[derive(Clone, Debug, Default)]
 pub struct StatusBar {
-    /// The theme color the bar is filled with, or `None` for the chrome's
+    /// The theme color the bar is filled with, or `None` for the bars'
     /// surface color.
     background: Option<ThemeToken>,
     /// The bar as last drawn, or `None` before the first frame.
@@ -278,7 +278,7 @@ impl StatusBar {
     }
 
     /// This bar filled with the theme color `background` rather than the
-    /// chrome's surface color: [`ThemeToken::Background`] for a bar that
+    /// bars' surface color: [`ThemeToken::Background`] for a bar that
     /// reads as part of the content above it, as a terminal's does.
     pub fn with_background(self, background: ThemeToken) -> Self {
         Self {
@@ -356,13 +356,13 @@ impl StatusBar {
         let interior_y = bar.y + stroke;
         let interior_h = (bar.height - stroke).max(0.0);
         let top = interior_y + ((interior_h - metrics.height) / 2.0).round();
-        let optical_shift = match theme.chrome_text {
-            ChromeText::Cells => 0.0,
-            ChromeText::Proportional => logical(PROPORTIONAL_OPTICAL_SHIFT, scale_factor),
+        let optical_shift = match theme.label_font {
+            LabelFont::Cells => 0.0,
+            LabelFont::Proportional => logical(PROPORTIONAL_OPTICAL_SHIFT, scale_factor),
         };
         let at = |cell: usize| Point::new(bar.x + cell as f32 * metrics.width, top - optical_shift);
         // Measured as they are drawn, so each label fits the cells it is
-        // laid out in whatever the chrome font.
+        // laid out in whatever the label font.
         let cells = |segment: &StatusSegment| segment.width(frame, theme);
         let left_widths: Vec<usize> = left.iter().map(cells).collect();
         let after_widths: Vec<usize> = after.iter().map(cells).collect();
@@ -958,7 +958,7 @@ impl StatusSegment {
         }
     }
 
-    /// The cells it takes as drawn in `theme`'s chrome font, its icon and
+    /// The cells it takes as drawn in `theme`'s label font, its icon and
     /// the gap after it included.
     fn width(&self, frame: &Frame, theme: &Theme) -> usize {
         let metrics = frame.cell_metrics();
@@ -1009,7 +1009,7 @@ impl ModeBadge {
         self.color
     }
 
-    /// The cells the badge takes as drawn in `theme`'s chrome font, its
+    /// The cells the badge takes as drawn in `theme`'s label font, its
     /// padding included.
     fn width(&self, frame: &Frame, theme: &Theme) -> usize {
         styled_label_cells(frame, theme, &self.styled_label()) + 2 * BADGE_PADDING_CELLS
@@ -1221,7 +1221,7 @@ mod tests {
     use crate::app::offscreen;
     use crate::base::color::Rgba;
     use crate::base::notice::{Notice, Progress, Routing};
-    use crate::base::theme::ChromeText;
+    use crate::base::theme::LabelFont;
     use crate::input::event::ButtonInput;
     use crate::render::draw::PictureSource;
     use crate::testing::TestWindow;
@@ -1353,7 +1353,7 @@ mod tests {
     fn test_a_wide_segment_in_the_proportional_font_is_laid_out_cells_enough_to_hold_it() {
         let frame = offscreen::plain_frame(400, 100);
         let theme = Theme {
-            chrome_text: ChromeText::Proportional,
+            label_font: LabelFont::Proportional,
             ..Theme::dark()
         };
         let segment = StatusSegment::new(plain("WWWWWW"));

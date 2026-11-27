@@ -273,7 +273,7 @@ impl Button {
         }
     }
 
-    /// How wide it is drawn in `frame` with `theme`'s chrome font when it
+    /// How wide it is drawn in `frame` with `theme`'s label font when it
     /// has the room: its icon and label with padding on both sides, or a
     /// square for an icon-only button. Lay buttons out with it before
     /// drawing them.

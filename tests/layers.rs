@@ -4,9 +4,8 @@
 //! GPU, window, or other GUI crate. Tests inside a module may use anything.
 //!
 //! The layers, lowest first, are the top-level folders of `src`: `base`,
-//! `platform`, `render`, `input`, `app`, `widgets`, `chrome`, `view`,
-//! `runtime`; the modules at the top (`lib.rs`, `testing`, `bench.rs`)
-//! sit above them all.
+//! `platform`, `render`, `input`, `app`, `widgets`, `view`, `runtime`; the
+//! modules at the top (`lib.rs`, `testing`, `bench.rs`) sit above them all.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,8 +15,8 @@ use std::path::{Path, PathBuf};
 // ========================================================================
 
 /// The layers of `src`, lowest first.
-const LAYERS: [&str; 9] = [
-    "base", "platform", "render", "input", "app", "widgets", "chrome", "view", "runtime",
+const LAYERS: [&str; 8] = [
+    "base", "platform", "render", "input", "app", "widgets", "view", "runtime",
 ];
 
 /// The layers that may import `winit`.

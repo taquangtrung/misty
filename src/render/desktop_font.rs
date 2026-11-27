@@ -1,5 +1,5 @@
 //! The desktop's interface font: the family the system sets its own menus
-//! and dialogs in, which misty's proportional text (chrome labels,
+//! and dialogs in, which misty's proportional text (labels,
 //! paragraphs) takes as its sans-serif, so an app reads as the rest of the
 //! desktop does rather than in whatever family the font library guesses.
 //!

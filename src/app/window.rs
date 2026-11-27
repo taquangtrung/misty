@@ -225,7 +225,7 @@ pub(crate) struct Monitor {
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub enum Decorations {
-    /// No system title bar or border: the app draws its own chrome. On
+    /// No system title bar or border: the app draws its own title bar. On
     /// Windows the system drop shadow and thin edge are kept.
     Frameless,
     /// The system's own title bar and border.

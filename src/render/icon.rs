@@ -1,6 +1,6 @@
-//! Small chrome [`Icon`]s drawn from rectangles, so they need no font and
+//! Small [`Icon`]s for buttons, drawn from rectangles, so they need no font and
 //! stay crisp at any scale, and the logical to physical pixel rounding
-//! chrome sizes go through.
+//! the sizes of bars and buttons go through.
 
 use super::super::base::geometry::Rect;
 
@@ -15,7 +15,7 @@ const RESTORE_FRONT_SHARE: f32 = 0.75;
 // Data Structures
 // ========================================================================
 
-/// An icon on a chrome button.
+/// An icon on a button of a bar.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Icon {
     /// A downward-pointing angle, for an open fold.

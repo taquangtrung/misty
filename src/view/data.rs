@@ -728,7 +728,7 @@ impl<'a, A, S: ?Sized> Table<'a, A, S> {
     /// This table setting its cells on the monospace cell grid, as a
     /// terminal's listing lines up by character, rather than in the
     /// proportional font cells are set in, the header following the
-    /// theme's chrome font either way; fixed when the element is first
+    /// theme's label font either way; fixed when the element is first
     /// built.
     pub fn monospace(self) -> Self {
         Self {

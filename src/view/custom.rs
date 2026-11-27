@@ -614,7 +614,7 @@ pub fn custom<'a, A, W: Widget + 'static>(create: impl Fn() -> W + 'a) -> Custom
 ///
 /// The frame draws text three ways: [`Frame::draw_plain_text`] and
 /// [`Frame::draw_text`] on the cell grid, [`draw_label`](crate::draw_label)
-/// in the theme's chrome font, and [`Frame::draw_paragraph`] in the
+/// in the theme's label font, and [`Frame::draw_paragraph`] in the
 /// proportional (UI) font whatever the theme. A label at a point, such as
 /// a graph node's name, is a [`Paragraph`](crate::Paragraph) drawn in a
 /// rectangle one line tall and as wide as

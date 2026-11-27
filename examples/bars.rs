@@ -16,7 +16,7 @@
 //!   button; Ctrl+Q quits.
 //!
 //! ```sh
-//! cargo run -p misty --example chrome
+//! cargo run -p misty --example bars
 //! ```
 
 use std::borrow::Cow;
@@ -37,7 +37,7 @@ use misty::{
 // ========================================================================
 
 /// The window title.
-const TITLE: &str = "misty chrome";
+const TITLE: &str = "misty bars";
 
 /// The size the window opens at, in logical pixels.
 const SIZE: Size = Size::new(900, 560);
@@ -514,11 +514,11 @@ mod tests {
     }
 
     #[test]
-    fn test_the_window_describes_its_chrome_and_panes_at_start() {
+    fn test_the_window_describes_its_bars_and_panes_at_start() {
         let window = window();
         let text = window.ui_text();
         for part in [
-            "TitleBar \"misty chrome\"",
+            "TitleBar \"misty bars\"",
             "Button \"Menu\"",
             "Button \"Close\"",
             "TabList",

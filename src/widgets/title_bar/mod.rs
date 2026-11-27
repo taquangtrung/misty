@@ -1,4 +1,4 @@
-//! [`TitleBar`]: the chrome a frameless window draws in place of the
+//! [`TitleBar`]: the title bar a frameless window draws in place of the
 //! system's: the title, minimize, maximize, and close buttons, a drag
 //! region that moves the window (double-click to maximize), the resize
 //! border around the whole window, and, when asked for, a menu button at
@@ -1000,7 +1000,7 @@ impl TitleBarButton {
         }
     }
 
-    /// How wide its icon and label are side by side in `theme`'s chrome
+    /// How wide its icon and label are side by side in `theme`'s label
     /// font, without padding; 0 for an icon alone.
     fn content_width(&self, frame: &Frame, theme: &Theme) -> f32 {
         if self.label.is_empty() {
@@ -1093,7 +1093,7 @@ mod tests {
     use crate::app::offscreen;
     use crate::base::color::Rgba;
     use crate::base::text;
-    use crate::base::theme::ChromeText;
+    use crate::base::theme::LabelFont;
     use crate::input::event::ButtonInput;
     use crate::testing::TestWindow;
 
@@ -1318,7 +1318,7 @@ mod tests {
     #[test]
     fn test_a_wide_title_in_the_proportional_font_fits_its_hit_rect() {
         let theme = Theme {
-            chrome_text: ChromeText::Proportional,
+            label_font: LabelFont::Proportional,
             ..Theme::dark()
         };
         let title = "WWWWWWWWWW";

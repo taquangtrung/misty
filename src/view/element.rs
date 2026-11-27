@@ -136,8 +136,8 @@ pub(crate) struct Container<'a, A> {
     /// Whether a scrollbar along its content's right edge runs in its
     /// right padding, at its own right edge.
     pub(crate) bars_in_padding: bool,
-    /// Whether a form sets its labels in the theme's chrome font.
-    pub(crate) chrome_labels: bool,
+    /// Whether a form sets its labels in the theme's label font.
+    pub(crate) label_font: bool,
     /// The elements inside, in order.
     pub(crate) children: Vec<Element<'a, A>>,
     /// How they are laid out.
@@ -332,17 +332,17 @@ impl<'a, A> Element<'a, A> {
         self
     }
 
-    /// This form setting its labels as chrome, in the theme's
-    /// [`ChromeText`](crate::ChromeText) font as buttons and headers are
+    /// This form setting its labels in the theme's
+    /// [`LabelFont`](crate::LabelFont) font as buttons and headers are
     /// (the proportional font in the built-in themes, the cell grid in the
     /// grid look), the label column as wide as the widest label so set.
     /// Without it a form's labels sit on the cell grid, as they always
     /// have. Nothing for other elements.
-    pub fn chrome_labels(mut self) -> Self {
+    pub fn label_font(mut self) -> Self {
         if let Kind::Container(container) = &mut self.kind
             && container.direction == Direction::Form
         {
-            container.chrome_labels = true;
+            container.label_font = true;
         }
         self
     }
@@ -717,7 +717,7 @@ impl<'a, A> Element<'a, A> {
     ) -> Self {
         Self::new(Kind::Container(Container {
             bars_in_padding: false,
-            chrome_labels: false,
+            label_font: false,
             children,
             direction,
             labels,

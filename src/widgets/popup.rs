@@ -9,7 +9,7 @@ use super::super::app::frame::Frame;
 use super::super::base::box_style::BoxStyle;
 use super::super::base::geometry::{Point, Rect};
 use super::super::base::styled::StyledText;
-use super::super::base::theme::{ChromeText, Shape, Theme};
+use super::super::base::theme::{LabelFont, Shape, Theme};
 use super::super::render::font::CellMetrics;
 use super::label::{draw_styled_label, styled_label_width};
 
@@ -187,7 +187,7 @@ pub fn draw_backdrop(frame: &mut Frame, area: Rect, theme: &Theme) {
 /// Draws `strip` as a popup's header titled `title`, as a dialog or a
 /// picker heads itself: the raised color a little toward the border color,
 /// the title as styled (a dialog's in bold, a picker's with its error
-/// after it) in the theme's chrome font, centered when that font is
+/// after it) in the theme's label font, centered when that font is
 /// proportional and a cell in from the start on the cell grid, cut where
 /// it does not fit, with an ellipsis when it asks for one. A popup free to
 /// size its header gives the strip [`Popup::header_height`] at
@@ -202,9 +202,9 @@ pub fn draw_popup_header(frame: &mut Frame, theme: &Theme, strip: Rect, title: &
         (strip.width - 2.0 * inset).max(0.0),
         strip.height,
     );
-    let x = match theme.chrome_text {
-        ChromeText::Cells => room.x,
-        ChromeText::Proportional => {
+    let x = match theme.label_font {
+        LabelFont::Cells => room.x,
+        LabelFont::Proportional => {
             let width = styled_label_width(frame, theme, title).min(room.width);
             (room.x + (room.width - width) / 2.0).round()
         }

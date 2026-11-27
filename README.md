@@ -1,6 +1,6 @@
 # Misty
 
-A GPU-rendered GUI framework for Rust desktop apps: the window runtime, custom chrome, widgets, and themes, drawn with `wgpu`. Out of the box it looks and behaves as a desktop app should, with text in the desktop's interface font and the platform's keys; a keyboard-first app such as an editor, a file manager, or a terminal can opt into Vim and Emacs keys and a monospace cell grid.
+A GPU-rendered GUI framework for Rust desktop apps: the window runtime, widgets (a title bar, tabs, and a status bar among them), and themes, drawn with `wgpu`. Out of the box it looks and behaves as a desktop app should, with text in the desktop's interface font and the platform's keys; a keyboard-first app such as an editor, a file manager, or a terminal can opt into Vim and Emacs keys and a monospace cell grid.
 
 > Status: early. The API may change between versions.
 

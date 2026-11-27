@@ -1,6 +1,6 @@
 [package]
 name = "misty"
-description = "A GPU-rendered, keyboard-first GUI framework for Rust desktop apps: window runtime, chrome, widgets, and themes."
+description = "A GPU-rendered GUI framework for Rust desktop apps: window runtime, widgets, and themes."
 version = "0.0.2"
 edition = "2024"
 authors = ["Trung Ta <taquangtrungvn@gmail.com>"]
@@ -110,7 +110,7 @@ name = "grid"
 test = true
 
 [[example]]
-name = "chrome"
+name = "bars"
 test = true
 
 [[example]]

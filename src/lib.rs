@@ -1,8 +1,9 @@
 //! A GPU-rendered GUI framework for desktop apps: the window runtime,
-//! custom chrome, widgets, and themes. Text is set in the desktop's
-//! interface font and widgets take the platform's keys; a keyboard-first
-//! app opts into the Vim and Emacs keys ([`KeyScheme`]) and a monospace
-//! cell grid ([`Text::monospace`](view::Text::monospace)).
+//! widgets (a title bar, tabs, and a status bar among them), and themes.
+//! Text is set in the desktop's interface font and widgets take the
+//! platform's keys; a keyboard-first app opts into the Vim and Emacs keys
+//! ([`KeyScheme`]) and a monospace cell grid
+//! ([`Text::monospace`](view::Text::monospace)).
 //!
 //! An app described as a tree of elements implements [`App`], whose
 //! [`App::view`] builds each window's [`Element`]s from the app's state
@@ -16,7 +17,7 @@
 //! where its [`EventCx::geometry`] said it was when it closed, with
 //! [`WindowOptions::with_geometry`], and an app follows the user's light or
 //! dark, accent, and motion settings through [`AppContext::appearance`]
-//! and [`Input::AppearanceChanged`]. A frameless window draws its own chrome
+//! and [`Input::AppearanceChanged`]. A frameless window draws its own title bar
 //! with a [`TitleBar`], a [`TabStrip`] shows the app's tabs, a
 //! [`SplitView`] its panes, and a [`StatusBar`] the app's state and
 //! passing messages. A [`List`] shows rows the app supplies, and a
@@ -142,7 +143,6 @@ mod app;
 mod base;
 #[cfg(test)]
 mod bench;
-pub mod chrome;
 mod input;
 mod platform;
 mod render;
@@ -234,7 +234,7 @@ pub use base::strings::Strings;
 pub use base::styled::{FontFamily, Span, StyledText, TextColor, TextSize};
 pub use base::syntax::SyntaxColors;
 pub use base::text::ELLIPSIS;
-pub use base::theme::{ChromeText, Emphasis, Shape, ShapeShadow, Spacing, Theme, ThemeToken};
+pub use base::theme::{Emphasis, LabelFont, Shape, ShapeShadow, Spacing, Theme, ThemeToken};
 #[cfg(feature = "kdl")]
 pub use base::theme_file::{InvalidColor, ThemeFileError};
 pub use base::transform::Transform;
@@ -269,16 +269,8 @@ pub use view::embed::{HostedView, ScrollStep, ViewHost};
 pub use view::settings::{Setting, SettingValue, SettingsSection};
 pub use wgpu;
 pub use widgets::picker;
-// The widgets and the chrome at the root as well, as apps named them
-// before `widgets` and `chrome`; hidden from the docs, which show them
-// there.
-#[doc(hidden)]
-pub use chrome::{
-    DropZone, ModeBadge, SplitView, SplitViewResponse, StatusBar, StatusBarResponse, StatusLine,
-    StatusPrompt, StatusSegment, TabClose, TabDrag, TabId, TabStrip, TabStripHit, TabStripResponse,
-    TabStyle, TabWidth, TitleAlign, TitleBar, TitleBarButton, TitleBarHit, TitleBarResponse,
-    WindowButton, WindowButtons,
-};
+// The widgets at the root as well, as apps named them before `widgets`;
+// hidden from the docs, which show them there.
 #[cfg(feature = "highlight")]
 #[doc(hidden)]
 pub use widgets::Highlighter;
@@ -316,3 +308,10 @@ pub use widgets::{
 #[cfg(feature = "html")]
 #[doc(hidden)]
 pub use widgets::{ClassStyle, HtmlOptions, ImageSource};
+#[doc(hidden)]
+pub use widgets::{
+    DropZone, ModeBadge, SplitView, SplitViewResponse, StatusBar, StatusBarResponse, StatusLine,
+    StatusPrompt, StatusSegment, TabClose, TabDrag, TabId, TabStrip, TabStripHit, TabStripResponse,
+    TabStyle, TabWidth, TitleAlign, TitleBar, TitleBarButton, TitleBarHit, TitleBarResponse,
+    WindowButton, WindowButtons,
+};

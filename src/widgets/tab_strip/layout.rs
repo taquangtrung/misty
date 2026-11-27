@@ -183,7 +183,7 @@ impl TabStripLayout {
     /// The layout of `tabs` along the top of `area` in cells of `metrics`
     /// on a display scaled by `scale_factor`, drawn as `options` says,
     /// their titles `title_widths` wide (one for each tab, as labels in the
-    /// chrome font, in pixels), scrolled to start at `first` or as close to
+    /// label font, in pixels), scrolled to start at `first` or as close to
     /// it as still fills the strip, and scrolled further if needed to show
     /// the tab at index `reveal`.
     #[allow(clippy::too_many_arguments)]

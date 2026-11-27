@@ -268,7 +268,7 @@ impl Span {
     }
 
     /// This span in bold when `emphasis` is [`Emphasis::Bold`], as misty's
-    /// chrome stresses words the theme's way.
+    /// controls and bars stress words the theme's way.
     pub(crate) fn emphasized(self, emphasis: Emphasis) -> Self {
         Self {
             bold: emphasis == Emphasis::Bold,

@@ -1,6 +1,6 @@
 //! The form controls in one window, described as a tree: a checkbox and a
 //! switch, a radio group that switches the theme, a select that sets the
-//! chrome font, a slider driving a progress bar, a stepper, a progress bar
+//! label font, a slider driving a progress bar, a stepper, a progress bar
 //! of unknown length, and a text area, in a form that scrolls when the
 //! window is too short for it. Tab
 //! and Shift+Tab move between them, scrolling the one focused into view, a
@@ -23,7 +23,7 @@ use misty::view::{
     checkbox, column, field, form, progress, radio, select, slider, stepper, text, text_area,
 };
 use misty::{
-    App, AppCx, Appearance, ChromeText, Element, Key, KeyCode, KeyScheme, Mods, NumberRange, Size,
+    App, AppCx, Appearance, Element, Key, KeyCode, KeyScheme, LabelFont, Mods, NumberRange, Size,
     Theme, ThemeToken, WindowId, WindowOptions,
 };
 
@@ -64,10 +64,10 @@ const TAB_WIDTH_START: f64 = 4.0;
 /// The theme radio group's options: dark when `true`.
 const THEMES: [(bool, &str); 2] = [(true, "Dark"), (false, "Light")];
 
-/// The chrome font select's options.
-const FONTS: [(ChromeText, &str); 2] = [
-    (ChromeText::Proportional, "Proportional"),
-    (ChromeText::Cells, "Monospace cells"),
+/// The label font select's options.
+const FONTS: [(LabelFont, &str); 2] = [
+    (LabelFont::Proportional, "Proportional"),
+    (LabelFont::Cells, "Monospace cells"),
 ];
 
 /// What the text area holds at start.
@@ -123,11 +123,11 @@ impl Demo {
     }
 
     /// Switches to the dark theme when `dark`, or to the light one,
-    /// keeping the chrome font chosen.
+    /// keeping the label font chosen.
     fn set_dark(&mut self, dark: bool) {
-        let chrome_text = self.theme.chrome_text;
+        let label_font = self.theme.label_font;
         self.theme = if dark { Theme::dark() } else { Theme::light() };
-        self.theme.chrome_text = chrome_text;
+        self.theme.label_font = label_font;
         self.status = format!("theme: {}", if dark { "dark" } else { "light" });
     }
 }
@@ -163,11 +163,11 @@ impl App for Demo {
                         .on_change(|app: &mut Self, dark| app.set_dark(dark)),
                 ),
                 field(
-                    "Chrome font",
-                    select(&FONTS, &self.theme.chrome_text).on_change(
-                        |app: &mut Self, chrome_text| {
-                            app.theme.chrome_text = chrome_text;
-                            app.status = format!("chrome font: {chrome_text:?}");
+                    "Label font",
+                    select(&FONTS, &self.theme.label_font).on_change(
+                        |app: &mut Self, label_font| {
+                            app.theme.label_font = label_font;
+                            app.status = format!("label font: {label_font:?}");
                         },
                     ),
                 ),
@@ -214,11 +214,11 @@ impl App for Demo {
     }
 
     /// Follows the system's `appearance`: its light or dark theme in its
-    /// accent color, keeping the chrome font chosen, which the theme radio
+    /// accent color, keeping the label font chosen, which the theme radio
     /// group follows. The widgets follow its less motion on their own.
     fn follow_appearance(&mut self, appearance: Appearance) {
         self.theme = Theme {
-            chrome_text: self.theme.chrome_text,
+            label_font: self.theme.label_font,
             ..appearance.theme()
         };
     }
@@ -276,7 +276,7 @@ Window \"misty controls\"
     RadioGroup
       RadioButton \"Dark\" checked
       RadioButton \"Light\" unchecked
-    ComboBox \"Chrome font\" value=\"Proportional\" collapsed
+    ComboBox \"Label font\" value=\"Proportional\" collapsed
     Slider \"Volume\" value=\"40\" value=40
     SpinButton \"Tab width\" value=\"4\" value=4
       Button \"Decrease\"
@@ -326,7 +326,7 @@ Window \"misty controls\"
         let labels = [
             "Editor",
             "Theme",
-            "Chrome font",
+            "Label font",
             "Volume",
             "Level",
             "Tab width",
@@ -349,7 +349,7 @@ Window \"misty controls\"
             "CheckBox \"Wrap long lines\" checked",
             "Switch \"Autosave\" unchecked",
             "RadioButton \"Dark\" checked",
-            "ComboBox \"Chrome font\" value=\"Proportional\" collapsed",
+            "ComboBox \"Label font\" value=\"Proportional\" collapsed",
             "Slider \"Volume\" value=\"40\" value=40",
             "SpinButton \"Tab width\" value=\"4\" value=4",
         ];
@@ -468,16 +468,16 @@ Window \"misty controls\"
         window.press("<tab> <tab> <tab> RET");
         let text = window.ui_text();
         assert!(
-            text.contains("ComboBox \"Chrome font\" value=\"Proportional\" expanded"),
+            text.contains("ComboBox \"Label font\" value=\"Proportional\" expanded"),
             "{text}"
         );
         assert!(text.contains("ListBoxOption \"Monospace cells\""), "{text}");
         window.press("<tab> RET <down> RET");
-        assert_eq!(window.app().theme.chrome_text, ChromeText::Cells);
-        assert_eq!(window.app().status, "chrome font: Cells");
+        assert_eq!(window.app().theme.label_font, LabelFont::Cells);
+        assert_eq!(window.app().status, "label font: Cells");
         assert_eq!(
             focused(&window),
-            "ComboBox \"Chrome font\" value=\"Monospace cells\" collapsed",
+            "ComboBox \"Label font\" value=\"Monospace cells\" collapsed",
             "the focus is back on the box"
         );
     }
@@ -486,7 +486,7 @@ Window \"misty controls\"
     fn test_esc_and_a_click_outside_close_the_select_leaving_its_value() {
         let mut window = window();
         window.press("<tab> <tab> <tab> RET <down> <esc>");
-        assert_eq!(window.app().theme.chrome_text, ChromeText::Proportional);
+        assert_eq!(window.app().theme.label_font, LabelFont::Proportional);
         assert!(focused(&window).ends_with("collapsed"));
         window.press("<space>");
         assert!(window.ui_text().contains("expanded"));
@@ -503,11 +503,11 @@ Window \"misty controls\"
     #[test]
     fn test_a_screen_reader_opens_the_select_and_picks_an_option() {
         let mut window = window();
-        let font = window.find(Role::ComboBox, "Chrome font");
+        let font = window.find(Role::ComboBox, "Label font");
         window.act(AccessAction::Click(font));
         let option = window.find(Role::ListBoxOption, "Monospace cells");
         window.act(AccessAction::Click(option));
-        assert_eq!(window.app().theme.chrome_text, ChromeText::Cells);
+        assert_eq!(window.app().theme.label_font, LabelFont::Cells);
         assert!(window.ui_text().contains("collapsed"));
     }
 

@@ -38,7 +38,7 @@
 //! loses the accent line, so the focused pane's tab is the one marked.
 //! A window that has lost the focus says so with
 //! [`TabStrip::set_window_active`]: the accent line dims, as an inactive
-//! window's chrome does. An app drawing a border along the strip's top
+//! window's title bar does. An app drawing a border along the strip's top
 //! can have the accent line take it over across the active tab, with
 //! [`TabStrip::set_accent_overhang`], and leave out of the border the
 //! stretch [`TabStrip::accent_rect`] reports.
@@ -1063,7 +1063,7 @@ impl TabStrip {
         }
     }
 
-    /// Draws one chrome button on the strip.
+    /// Draws one of the strip's own buttons.
     #[allow(clippy::too_many_arguments)]
     fn draw_strip_button(
         &self,
@@ -1721,7 +1721,7 @@ mod tests {
     use super::*;
     use crate::app::access::find_node;
     use crate::app::offscreen;
-    use crate::base::theme::{ChromeText, Theme};
+    use crate::base::theme::{LabelFont, Theme};
 
     /// A strip with tabs titled `a`, `b`, `c`; `c` is active.
     fn strip() -> (TabStrip, [TabId; 3]) {
@@ -1748,7 +1748,7 @@ mod tests {
     #[test]
     fn test_a_wide_title_in_the_proportional_font_is_given_the_room_it_takes() {
         let theme = Theme {
-            chrome_text: ChromeText::Proportional,
+            label_font: LabelFont::Proportional,
             ..Theme::dark()
         };
         let mut strip = TabStrip::new();

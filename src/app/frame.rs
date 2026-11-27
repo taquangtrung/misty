@@ -396,7 +396,7 @@ impl Frame {
 
     /// The size of a cell in `font` on the window's display, for laying out
     /// a grid drawn in a font other than the window's (a terminal's text,
-    /// larger than the chrome around it) with [`Frame::draw_cells_in`].
+    /// larger than the bars around it) with [`Frame::draw_cells_in`].
     pub fn cell_metrics_of(&self, font: &Font) -> CellMetrics {
         let mut fonts = self.fonts.lock().unwrap_or_else(PoisonError::into_inner);
         fonts.cell_of(font, self.scale_factor)

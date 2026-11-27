@@ -43,7 +43,7 @@ use super::super::base::geometry::{Point, Rect};
 use super::super::base::key::{Key, parse_key};
 use super::super::base::styled::{Span, StyledText, TextColor};
 use super::super::base::text;
-use super::super::base::theme::{ChromeText, Theme, ThemeToken};
+use super::super::base::theme::{LabelFont, Theme, ThemeToken};
 use super::super::input::event::{Input, PointerButton, WheelDelta};
 use super::super::platform::waker::Waker;
 use super::super::render::icon::logical;
@@ -760,7 +760,7 @@ impl<O, P> QuickPick<O, P> {
         let hint_lines = usize::from(!view.hints.is_empty());
         // The height around the rows: the heading and query, the hints, the
         // panel under the list, the separators, and the box's inset.
-        let chrome = |beside: bool| {
+        let around_rows = |beside: bool| {
             let under = match shown && !beside {
                 true => PANEL_LINES,
                 false => 0,
@@ -774,7 +774,7 @@ impl<O, P> QuickPick<O, P> {
         };
         let slot = row_slot(metrics.height, theme, scale_factor);
         let width = (natural_width_cols as f32 * metrics.width + margins).ceil();
-        let natural_height = natural_lines as f32 * slot + chrome(natural_beside);
+        let natural_height = natural_lines as f32 * slot + around_rows(natural_beside);
         let (width, height) = match (self.anchor, self.placement, self.window_share) {
             (None, QuickPickPlacement::Window, Some((width_share, height_share))) => (
                 (area.width * width_share).round(),
@@ -828,9 +828,10 @@ impl<O, P> QuickPick<O, P> {
         };
         let lines = match popup.height == natural_height {
             true => natural_lines,
-            false => {
-                (((popup.height - chrome(beside)) / slot).floor().max(0.0) as usize).max(MIN_LINES)
-            }
+            false => (((popup.height - around_rows(beside)) / slot)
+                .floor()
+                .max(0.0) as usize)
+                .max(MIN_LINES),
         };
         // A floating box given a height (a share of the window, or the
         // user's) ends under a whole row, rather than leaving what is left
@@ -843,7 +844,7 @@ impl<O, P> QuickPick<O, P> {
             QuickPickPlacement::Window => Some(area),
             QuickPickPlacement::DockedBottom(_) | QuickPickPlacement::Filling(_) => None,
         };
-        let whole = |lines: usize| lines as f32 * slot + chrome(beside);
+        let whole = |lines: usize| lines as f32 * slot + around_rows(beside);
         let centered = self.window_share.is_some() && self.size.is_none();
         let refit = |height: f32| {
             let rise = match centered {
@@ -1020,9 +1021,9 @@ impl<O, P> QuickPick<O, P> {
         };
         let top = field.y;
         // A boxed query is a desktop search field: in the proportional font
-        // where the theme's chrome is, its placeholder with it.
+        // where the theme's bars are, its placeholder with it.
         let proportional =
-            self.query_style == QueryStyle::Field && theme.chrome_text == ChromeText::Proportional;
+            self.query_style == QueryStyle::Field && theme.label_font == LabelFont::Proportional;
         if view.query.is_empty() && !view.placeholder.is_empty() {
             let placeholder = StyledText::plain(view.placeholder.as_str(), QUIET_COLOR);
             let at = Point::new(field.x, top);
@@ -1584,7 +1585,7 @@ fn default_key(act: PickerAct) -> Option<Key> {
 
 /// The cells a picker hung from an anchor takes: its widest row's label,
 /// description, and hint, its heading and count (labels in `theme`'s
-/// chrome font, measured as they are drawn), or its prompt.
+/// label font, measured as they are drawn), or its prompt.
 fn anchored_cols(frame: &Frame, theme: &Theme, view: &SessionView, has_icons: bool) -> usize {
     let icon = usize::from(has_icons) * ICON_CELLS;
     let rows = view.rows.iter().map(|shown| {

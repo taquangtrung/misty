@@ -20,7 +20,7 @@ Misty is a GPU-rendered, keyboard-first GUI framework for Rust desktop apps. Kee
 
 - Colors, shapes, and emphasis come from the theme only (`Shape`, `Emphasis`, `Span::emphasized`); no color literals, no `Span::bold` in widget code.
 - Words misty shows or names for screen readers come from `theme.strings`.
-- Measure and draw chrome labels through `widgets/label.rs`, so they follow `ChromeText`.
+- Measure and draw the labels of controls and bars through `widgets/label.rs`, so they follow `LabelFont`.
 - Text that lines up in columns (list rows, code, hex, grids, typed text) stays on the cell grid. With `with_proportional_font`, place carets and selections through `ParagraphLayout`, never cell math.
 
 ## Interaction
@@ -32,7 +32,7 @@ Misty is a GPU-rendered, keyboard-first GUI framework for Rust desktop apps. Kee
 
 ## Layers
 
-Lowest first: `base`, `platform`, `render`, `input`, `app`, `widgets`, `chrome`, `view`, `runtime`. Import only from your layer or below; no `winit` in `widgets`, `chrome`, or `view`; no GPU or window crates in `base`. `make layers` checks it.
+Lowest first: `base`, `platform`, `render`, `input`, `app`, `widgets`, `view`, `runtime`. Import only from your layer or below; no `winit` in `widgets` or `view`; no GPU or window crates in `base`. `make layers` checks it.
 
 ## Checks
 

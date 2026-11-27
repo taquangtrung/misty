@@ -1,8 +1,8 @@
-//! A [`Theme`]: the named colors widgets and chrome are drawn in (each
+//! A [`Theme`]: the named colors widgets are drawn in (each
 //! named by a [`ThemeToken`]), the [`Palette`] cell colors resolve
 //! against, the [`SyntaxColors`] of highlighted source text, the
-//! [`Shape`] of its boxes, the font its chrome is set in
-//! ([`ChromeText`]), and the words its widgets show ([`Strings`]). Two are
+//! [`Shape`] of its boxes, the font its labels are set in
+//! ([`LabelFont`]), and the words its widgets show ([`Strings`]). Two are
 //! built in,
 //! [`Theme::dark`] and [`Theme::light`]; with the `kdl` feature, a theme
 //! file can lay its own colors and shape over either.
@@ -89,9 +89,9 @@ const BACKDROP_ALPHA: u8 = 140;
 // Data Structures
 // ========================================================================
 
-/// What an app's chrome is drawn and worded with: its colors, the shape of
-/// its boxes, its fonts, and the words misty's widgets show. Widget and
-/// chrome code takes every color, box style, and built-in word from here,
+/// What an app's widgets are drawn and worded with: its colors, the shape of
+/// its boxes, its fonts, and the words misty's widgets show. Widget
+/// code takes every color, box style, and built-in word from here,
 /// never from a literal, so switching the theme restyles (or translates)
 /// all of it. The default is [`Theme::dark`].
 ///
@@ -118,9 +118,9 @@ pub struct Theme {
     pub background_alpha: u8,
     /// Window borders and the lines between panes.
     pub border: Rgb,
-    /// The font menus and other chrome set their labels in: the cell
+    /// The font menus, buttons, and bars set their labels in: the cell
     /// grid's monospace font, or the proportional one.
-    pub chrome_text: ChromeText,
+    pub label_font: LabelFont,
     /// The color of the text cursor: a field's or an editor's caret, and a
     /// cell grid's cursor.
     pub cursor: Rgb,
@@ -133,7 +133,7 @@ pub struct Theme {
     /// The background of a control that destroys something, such as a
     /// window's close button, while the pointer is over it.
     pub danger: Rgb,
-    /// How misty's chrome sets the words it stresses (a status toast, the
+    /// How misty's controls and bars set the words they stress (a status toast, the
     /// mode badge, a dialog's or a popup's title, a menu heading, keycaps
     /// and which-key headers): in bold, the built-in themes' choice, or at
     /// the regular weight, for an app drawn at one weight throughout.
@@ -141,7 +141,7 @@ pub struct Theme {
     /// Primary text and icons: labels, content, the active item's title,
     /// and what a cell's [`CellColor::Default`] foreground means.
     pub foreground: Rgb,
-    /// The background of a chrome control while the pointer is over it.
+    /// The background of a control while the pointer is over it.
     pub hover: Rgb,
     /// The characters of a list's rows that match what was typed, in a
     /// picker or a completion list. The built-in themes make it
@@ -193,7 +193,7 @@ pub struct Theme {
     /// bar's button names, a tree's loading row), English in the built-in
     /// themes; set them to translate every widget.
     pub strings: Strings,
-    /// The background of chrome around the content: title bar, tab strip,
+    /// The background of the bars around the content: title bar, tab strip,
     /// status bar.
     pub surface: Rgb,
     /// The colors of highlighted source text, by highlight name.
@@ -249,28 +249,28 @@ pub enum ThemeToken {
     Warning,
 }
 
-/// The font a theme sets its chrome's labels in: the title bar, tabs, the
+/// The font a theme sets the labels of its controls and bars in: the title bar, tabs, the
 /// status bar, and menu items and their keys. Content keeps its own font
 /// either way: a terminal's cells, an editor's text, a table's data.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
-pub enum ChromeText {
+pub enum LabelFont {
     /// The cell grid's monospace font, each character in its cells: the
     /// look of a terminal, which [`Theme::with_grid_look`] picks.
     Cells,
     /// The proportional font, each character as wide as its shape, as most
-    /// desktop apps set their chrome. The built-in themes' choice.
+    /// desktop apps set their labels. The built-in themes' choice.
     #[default]
     Proportional,
 }
 
-/// How a theme sets the words misty's chrome stresses. Content keeps its
+/// How a theme sets the words misty's controls and bars stress. Content keeps its
 /// own weights either way: a span the app made bold stays bold.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub enum Emphasis {
     /// In the font's bold weight. The built-in themes' choice.
     #[default]
     Bold,
-    /// At the font's regular weight, as the rest of the chrome: the
+    /// At the font's regular weight, as the rest of the labels: the
     /// stressed words stand out by their color alone.
     Regular,
 }
@@ -339,7 +339,7 @@ impl Theme {
             background: DARK_BACKGROUND,
             background_alpha: u8::MAX,
             border: Rgb::new(0x45, 0x47, 0x5a),
-            chrome_text: ChromeText::Proportional,
+            label_font: LabelFont::Proportional,
             cursor: DARK_CURSOR,
             cursor_line: Rgb::new(0x2a, 0x2b, 0x3c),
             danger: Rgb::new(0xd2, 0x0f, 0x39),
@@ -377,7 +377,7 @@ impl Theme {
             background: LIGHT_BACKGROUND,
             background_alpha: u8::MAX,
             border: Rgb::new(0xbc, 0xc0, 0xcc),
-            chrome_text: ChromeText::Proportional,
+            label_font: LabelFont::Proportional,
             cursor: LIGHT_CURSOR,
             cursor_line: Rgb::new(0xe6, 0xe9, 0xef),
             danger: Rgb::new(0xd2, 0x0f, 0x39),
@@ -407,12 +407,12 @@ impl Theme {
         }
     }
 
-    /// This theme with the look of a terminal's cell grid: chrome labels
-    /// in the monospace cells ([`ChromeText::Cells`]) and square, flat
+    /// This theme with the look of a terminal's cell grid: labels
+    /// in the monospace cells ([`LabelFont::Cells`]) and square, flat
     /// boxes ([`Shape::GRID`]), its colors kept.
     pub fn with_grid_look(self) -> Self {
         Self {
-            chrome_text: ChromeText::Cells,
+            label_font: LabelFont::Cells,
             shape: Shape::GRID,
             ..self
         }
@@ -751,10 +751,10 @@ mod tests {
     fn test_the_builtin_themes_are_modern_and_the_grid_look_is_opt_in() {
         for theme in [Theme::dark(), Theme::light()] {
             assert_eq!(theme.shape, Shape::MODERN);
-            assert_eq!(theme.chrome_text, ChromeText::Proportional);
+            assert_eq!(theme.label_font, LabelFont::Proportional);
             let grid = theme.clone().with_grid_look();
             assert_eq!(grid.shape, Shape::GRID);
-            assert_eq!(grid.chrome_text, ChromeText::Cells);
+            assert_eq!(grid.label_font, LabelFont::Cells);
             assert_eq!(grid.background, theme.background, "colors kept");
         }
     }

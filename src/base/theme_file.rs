@@ -9,7 +9,7 @@ use thiserror::Error;
 use super::color::{HexColorError, Rgb, Rgba};
 use super::palette::ANSI_COLORS;
 use super::strings::Strings;
-use super::theme::{ChromeText, Emphasis, Shape, ShapeShadow, Theme};
+use super::theme::{Emphasis, LabelFont, Shape, ShapeShadow, Theme};
 
 // ========================================================================
 // Constants
@@ -39,10 +39,10 @@ const ANSI: &str = "ansi";
 /// The node holding a file's box shape.
 const SHAPE: &str = "shape";
 
-/// The node naming the font chrome labels are set in.
-const CHROME_TEXT: &str = "chrome-text";
+/// The node naming the font the labels of controls and bars are set in.
+const LABEL_FONT: &str = "label-font";
 
-/// The node naming how chrome stresses words.
+/// The node naming how controls and bars stress words.
 const EMPHASIS: &str = "emphasis";
 
 /// The node holding the words widgets show.
@@ -129,9 +129,9 @@ pub enum ThemeFileError {
     /// `base` names no built-in theme; carries the name given.
     #[error("{0:?} is not a built-in theme; use \"dark\" or \"light\"")]
     UnknownBase(String),
-    /// `chrome-text` names no font choice; carries the name given.
-    #[error("{0:?} is not a chrome text; use \"cells\" or \"proportional\"")]
-    UnknownChromeText(String),
+    /// `label-font` names no font choice; carries the name given.
+    #[error("{0:?} is not a label font; use \"cells\" or \"proportional\"")]
+    UnknownLabelFont(String),
     /// `emphasis` names no emphasis; carries the name given.
     #[error("{0:?} is not an emphasis; use \"bold\" or \"regular\"")]
     UnknownEmphasis(String),
@@ -206,15 +206,15 @@ impl Theme {
     /// a highlighter with names of its own can be themed. Colors are
     /// `#rrggbb`.
     ///
-    /// `chrome-text` sets the font chrome labels are set in ([`ChromeText`]):
+    /// `label-font` sets the font the labels of controls and bars are set in ([`LabelFont`]):
     /// `"cells"`, the monospace cell grid, or `"proportional"`:
     ///
     /// ```kdl
-    /// chrome-text "proportional"
+    /// label-font "proportional"
     /// ```
     ///
-    /// `emphasis` sets how chrome stresses words ([`Emphasis`]): `"bold"`,
-    /// the built-in themes' choice, or `"regular"`, for chrome drawn at one
+    /// `emphasis` sets how controls and bars stress words ([`Emphasis`]): `"bold"`,
+    /// the built-in themes' choice, or `"regular"`, for labels drawn at one
     /// weight throughout:
     ///
     /// ```kdl
@@ -276,7 +276,7 @@ impl Theme {
                 BASE => {}
                 COLORS => apply_colors(&mut theme, node)?,
                 SHAPE => apply_shape(&mut theme.shape, node)?,
-                CHROME_TEXT => theme.chrome_text = chrome_text(node)?,
+                LABEL_FONT => theme.label_font = label_font(node)?,
                 EMPHASIS => theme.emphasis = emphasis(node)?,
                 STRINGS => apply_strings(&mut theme.strings, node)?,
                 other => return Err(ThemeFileError::UnknownNode(other.to_owned())),
@@ -383,12 +383,12 @@ fn apply_strings(strings: &mut Strings, node: &KdlNode) -> Result<(), ThemeFileE
     Ok(())
 }
 
-/// The font choice the `chrome-text` node names.
-fn chrome_text(node: &KdlNode) -> Result<ChromeText, ThemeFileError> {
-    match string_value(node, CHROME_TEXT)?.as_str() {
-        "cells" => Ok(ChromeText::Cells),
-        "proportional" => Ok(ChromeText::Proportional),
-        other => Err(ThemeFileError::UnknownChromeText(other.to_owned())),
+/// The font choice the `label-font` node names.
+fn label_font(node: &KdlNode) -> Result<LabelFont, ThemeFileError> {
+    match string_value(node, LABEL_FONT)?.as_str() {
+        "cells" => Ok(LabelFont::Cells),
+        "proportional" => Ok(LabelFont::Proportional),
+        other => Err(ThemeFileError::UnknownLabelFont(other.to_owned())),
     }
 }
 
@@ -776,13 +776,13 @@ mod tests {
     }
 
     #[test]
-    fn test_chrome_text_picks_the_font_and_rejects_others() {
-        assert_eq!(Theme::dark().chrome_text, ChromeText::Proportional);
-        let theme = Theme::from_kdl(r#"chrome-text "cells""#).unwrap();
-        assert_eq!(theme.chrome_text, ChromeText::Cells);
+    fn test_label_font_picks_the_font_and_rejects_others() {
+        assert_eq!(Theme::dark().label_font, LabelFont::Proportional);
+        let theme = Theme::from_kdl(r#"label-font "cells""#).unwrap();
+        assert_eq!(theme.label_font, LabelFont::Cells);
         assert!(matches!(
-            Theme::from_kdl(r#"chrome-text "serif""#).unwrap_err(),
-            ThemeFileError::UnknownChromeText(name) if name == "serif"
+            Theme::from_kdl(r#"label-font "serif""#).unwrap_err(),
+            ThemeFileError::UnknownLabelFont(name) if name == "serif"
         ));
     }
 

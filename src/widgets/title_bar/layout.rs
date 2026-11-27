@@ -75,7 +75,7 @@ impl TitleBarLayout {
     /// The layout in `window`, sized for cells of `metrics` (the bar
     /// `height_ratio` cells tall, or misty's default for `None`) on a
     /// display scaled by `scale_factor`, with a menu button when `has_menu_button`,
-    /// a menubar of titles `menu_widths` wide (as labels in the chrome
+    /// a menubar of titles `menu_widths` wide (as labels in the label
     /// font, in pixels, before their padding), and the app's buttons, each
     /// as wide as its content in `app_widths` (0 for an icon alone, which
     /// takes a window button's width). The app's buttons sit at the end of

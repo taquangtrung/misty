@@ -208,7 +208,7 @@ The examples each show one part of misty, most of them as tree apps like this on
 | `list` | A list of 100,000 rows: selection, dragging rows, which-key hints. |
 | `table` | A table of 100,000 rows in columns. |
 | `tree` | A folder tree over the file system. |
-| `chrome` | A frameless window with misty's title bar, menus, tabs, and status bar. |
+| `bars` | A frameless window with misty's title bar, menus, tabs, and status bar. |
 | `notify` | Tooltips and toasts. |
 | `panes` | Split panes. |
 | `workbench` | A larger app in one tree: what misty looks like at scale. |

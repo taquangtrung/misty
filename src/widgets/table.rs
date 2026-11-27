@@ -722,7 +722,7 @@ impl Table {
 
     /// This table with its cells' text laid out in the proportional font,
     /// each character as wide as its shape, as a desktop file manager sets
-    /// its rows; the header follows the theme's chrome font either way.
+    /// its rows; the header follows the theme's label font either way.
     pub fn with_proportional_font(self) -> Self {
         Self {
             font: RowFont::Proportional,
@@ -753,7 +753,7 @@ impl Table {
 
     /// This table drawing its cells `zoom` times their size: their text,
     /// the rows' height, and the columns' widths; the header keeps the
-    /// chrome's size. 1 (the default) for their own size.
+    /// label font's size. 1 (the default) for their own size.
     pub fn with_zoom(mut self, zoom: f32) -> Self {
         self.set_zoom(zoom);
         self
@@ -1960,7 +1960,7 @@ fn table_response(response: ListResponse) -> TableResponse {
     }
 }
 
-/// Draws `text` in `color` as a chrome label placed in `cell` by `align`,
+/// Draws `text` in `color` as a label placed in `cell` by `align`,
 /// cut to it with an ellipsis.
 fn draw_cell(
     frame: &mut Frame,

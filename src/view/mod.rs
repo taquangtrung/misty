@@ -57,7 +57,7 @@
 //!   while misty keeps the scroll, the keys typed toward a motion, drags,
 //!   and a tree's expanded nodes. [`cells`] draws the app's grid of cells
 //!   with a blinking cursor.
-//! - **Chrome:** [`title_bar`] draws a frameless window's bar (its
+//! - **Bars:** [`title_bar`] draws a frameless window's bar (its
 //!   buttons, drag region, and resize border, and a menu button and
 //!   menubar asking the app for its menus), [`tab_strip`] the app's
 //!   [`tab`]s, [`split`] two elements beside a divider the user drags,
@@ -88,9 +88,9 @@
 //!   is no longer built.
 
 pub(crate) mod app;
+pub(crate) mod bars;
 pub(crate) mod breadcrumb;
 pub(crate) mod chart;
-pub(crate) mod chrome;
 pub(crate) mod controls;
 pub(crate) mod custom;
 pub(crate) mod data;
@@ -108,12 +108,12 @@ pub(crate) mod region;
 pub(crate) mod settings;
 pub(crate) mod store;
 
-pub use breadcrumb::{Breadcrumb, breadcrumb};
-pub use chart::{meter, sparkline};
-pub use chrome::{
+pub use bars::{
     DraggedTab, Split, StatusBar, Tab, TabStrip, TitleBar, split, status_bar, tab, tab_strip,
     title_bar,
 };
+pub use breadcrumb::{Breadcrumb, breadcrumb};
+pub use chart::{meter, sparkline};
 pub use controls::{
     Button, Checkbox, Number, Progress, Radio, Select, TextArea, TextField, button, checkbox,
     icon_button, progress, radio, select, select_owned, slider, stepper, text_area, text_field,

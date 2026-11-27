@@ -31,7 +31,7 @@
 //! placeholder, and a composition are laid out in the proportional font,
 //! and the caret, the selection, and the pointer follow each glyph's
 //! shape. The choice is the field's, not the theme's: the theme's
-//! [`ChromeText`](crate::ChromeText) sets chrome labels, while typed text is
+//! [`LabelFont`](crate::LabelFont) sets labels, while typed text is
 //! content, which keeps its font either way, so a query lined up with the
 //! cell-grid rows it filters stays on cells under any theme. A form's
 //! inputs (a search box, an entry form, a reader's settings) opt in.
@@ -277,7 +277,7 @@ impl TextField {
     /// desktop form's inputs are; without it, they sit on the cell grid. The
     /// caret, the selection, and pointer presses follow the glyphs either
     /// way. Typed text is content, so the theme's
-    /// [`ChromeText`](crate::ChromeText) does not choose this for the field.
+    /// [`LabelFont`](crate::LabelFont) does not choose this for the field.
     pub fn with_proportional_font(self) -> Self {
         Self {
             proportional: true,

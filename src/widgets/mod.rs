@@ -1,7 +1,8 @@
 //! The widgets an app that drives its own window composes in it, each
 //! keeping the [`Widget`](crate::Widget) contract, with what they share:
-//! list keys, glides, drags, popups, and the command registry; the
-//! window's chrome is in [`chrome`](crate::chrome).
+//! list keys, glides, drags, popups, and the command registry, and the
+//! bars around a window's content: the [`TitleBar`], the [`TabStrip`], the
+//! [`StatusBar`], and the [`SplitView`] of panes.
 //! An app described as a tree of elements builds the same widgets with
 //! the functions of [`view`](crate::view) instead.
 
@@ -47,12 +48,16 @@ pub(crate) mod row_content;
 pub(crate) mod scroll_view;
 pub(crate) mod select;
 pub(crate) mod slider;
+pub(crate) mod split_view;
+pub(crate) mod status_bar;
 pub(crate) mod stepper;
+pub(crate) mod tab_strip;
 pub(crate) mod table;
 pub(crate) mod text_area;
 pub(crate) mod text_field;
 pub(crate) mod thumbnails;
 pub(crate) mod tiles;
+pub(crate) mod title_bar;
 pub(crate) mod toast;
 pub(crate) mod toolbar;
 pub(crate) mod tooltip;
@@ -74,6 +79,17 @@ pub(crate) const FOCUS_STROKE: f32 = 2.0;
 // Public API
 // ========================================================================
 
+pub use self::split_view::{DropZone, SplitView, SplitViewResponse};
+pub use self::status_bar::{
+    ModeBadge, StatusBar, StatusBarResponse, StatusLine, StatusPrompt, StatusSegment,
+};
+pub use self::tab_strip::{
+    TabClose, TabDrag, TabId, TabStrip, TabStripHit, TabStripResponse, TabStyle, TabWidth,
+};
+pub use self::title_bar::{
+    TitleAlign, TitleBar, TitleBarButton, TitleBarHit, TitleBarResponse, WindowButton,
+    WindowButtons,
+};
 pub use breadcrumb::{Breadcrumb, BreadcrumbProps, BreadcrumbResponse, Crumb};
 pub use button::{Button, ButtonProps, ButtonResponse, ButtonVariant};
 pub use checkbox::{Checkbox, CheckboxProps, CheckboxResponse};

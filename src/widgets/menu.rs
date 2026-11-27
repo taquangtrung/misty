@@ -1199,7 +1199,7 @@ mod tests {
     use crate::app::access::find_node;
     use crate::app::offscreen;
     use crate::base::text;
-    use crate::base::theme::{ChromeText, Theme};
+    use crate::base::theme::{LabelFont, Theme};
     use crate::input::event::ButtonInput;
     use crate::testing::{TestWindow, ui_text};
 
@@ -1516,9 +1516,9 @@ mod tests {
         let entries = || -> Vec<MenuEntry<u8>> {
             vec![MenuItem::new(1, "illuminating little lists in italic").into()]
         };
-        let width = |chrome_text| {
+        let width = |label_font| {
             let theme = Theme {
-                chrome_text,
+                label_font,
                 ..Theme::dark()
             };
             let mut menu = Menu::new(entries());
@@ -1527,7 +1527,7 @@ mod tests {
             menu.draw(&mut frame, WINDOW, &theme);
             menu.layout.as_ref().expect("drawn").popup.rect().width
         };
-        let (cells, proportional) = (width(ChromeText::Cells), width(ChromeText::Proportional));
+        let (cells, proportional) = (width(LabelFont::Cells), width(LabelFont::Proportional));
         assert!(
             proportional < cells,
             "narrow letters take less room: {proportional} against {cells}"
@@ -1537,7 +1537,7 @@ mod tests {
     #[test]
     fn test_a_proportional_menu_paints_its_labels() {
         let theme = Theme {
-            chrome_text: ChromeText::Proportional,
+            label_font: LabelFont::Proportional,
             ..Theme::dark()
         };
         let mut menu = open_menu();
