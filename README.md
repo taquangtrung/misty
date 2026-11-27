@@ -1,6 +1,6 @@
 # Misty
 
-A GPU-rendered, keyboard-first GUI framework for Rust desktop apps: the window runtime, custom chrome, widgets, and themes, drawn with `wgpu`. It suits apps where the keyboard comes first, such as editors, file managers, terminals, and readers.
+A GPU-rendered GUI framework for Rust desktop apps: the window runtime, custom chrome, widgets, and themes, drawn with `wgpu`. Out of the box it looks and behaves as a desktop app should, with text in the desktop's interface font and the platform's keys; a keyboard-first app such as an editor, a file manager, or a terminal can opt into Vim and Emacs keys and a monospace cell grid.
 
 > Status: early. The API may change between versions.
 
@@ -53,7 +53,7 @@ More examples are in the repository's [`examples`](https://github.com/taquangtru
 
 - Window runtime: several windows, frameless windows with misty's own title bar, tabs, split panes, and a status bar.
 - Widgets: lists, tables, trees, text fields and areas, menus, dialogs, a command palette, which-key hints, toasts, a settings page, and form controls.
-- Keyboard first: a key notation (`C-x`, `<esc>`, `g g`) and a command registry that keeps each command's keys and reports clashes. Misty resolves no key presses itself, so an app picks its own keymap library.
+- Keyboard: every widget takes the platform's keys, and an app opts into the Vim and Emacs keys with `KeyScheme`. A key notation (`C-x`, `<esc>`, `g g`) and a command registry keep each command's keys and report clashes. Misty resolves no app key presses itself, so an app picks its own keymap library.
 - Themes, with theme files in KDL and every built-in word translatable.
 - Text: right-to-left and mixed text, and emoji and CJK falling back to whatever system font covers them; wrapped rich paragraphs, justified or aligned, with inline boxes for images and formulas, laid out on worker threads too.
 - Accessibility through AccessKit, built afresh every frame.
@@ -61,12 +61,14 @@ More examples are in the repository's [`examples`](https://github.com/taquangtru
 
 ## Cargo features
 
+No feature is on by default.
+
 | Feature | Adds |
 | --- | --- |
 | `dialogs` | `FileDialog`, the system's dialogs to open and save files. |
 | `files` | `misty::picker::files`, picker sources over the file system: a folder browser and a scan for kinds of file. |
 | `global-hotkey` | `GlobalHotkeys`, keys that reach the app while another app has the focus. |
-| `highlight` (default) | `Highlighter`, syntax highlighting for a `CodeView`, through iris. |
+| `highlight` | `Highlighter`, syntax highlighting for a `CodeView`, through iris. |
 | `html` | `Document::from_html`, a safe subset of HTML for `RichText`. |
 | `icon-theme` | `IconTheme`, file-type and named icons from the freedesktop icon theme. |
 | `kdl` | Theme files in KDL. |
