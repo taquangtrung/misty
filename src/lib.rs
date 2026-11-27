@@ -1,5 +1,8 @@
-//! A GPU-rendered, keyboard-first GUI framework for desktop apps: the window
-//! runtime, custom chrome, widgets, and themes.
+//! A GPU-rendered GUI framework for desktop apps: the window runtime,
+//! custom chrome, widgets, and themes. Text is set in the desktop's
+//! interface font and widgets take the platform's keys; a keyboard-first
+//! app opts into the Vim and Emacs keys ([`KeyScheme`]) and a monospace
+//! cell grid ([`Text::monospace`](view::Text::monospace)).
 //!
 //! An app described as a tree of elements implements [`App`], whose
 //! [`App::view`] builds each window's [`Element`]s from the app's state
@@ -7,7 +10,8 @@
 //! the tree out, draws it, focuses and describes its controls, and runs
 //! the callbacks they were given. An app that drives its widgets itself,
 //! frame by frame, implements [`Application`] and hands it to [`run`] with
-//! the [`WindowOptions`] of its first window; [`AppContext::open_window`]
+//! the [`WindowOptions`] of its first window, drawing the widgets of
+//! [`widgets`]; [`AppContext::open_window`]
 //! opens more, all sharing one GPU and one set of fonts. A window opens
 //! where its [`EventCx::geometry`] said it was when it closed, with
 //! [`WindowOptions::with_geometry`], and an app follows the user's light or
@@ -138,7 +142,7 @@ mod app;
 mod base;
 #[cfg(test)]
 mod bench;
-mod chrome;
+pub mod chrome;
 mod input;
 mod platform;
 mod render;
@@ -146,7 +150,7 @@ mod runtime;
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
 pub mod view;
-mod widgets;
+pub mod widgets;
 
 pub use accesskit;
 pub use app::access::AccessAction;
@@ -213,17 +217,6 @@ pub use base::theme::{ChromeText, Emphasis, Shape, ShapeShadow, Spacing, Theme, 
 #[cfg(feature = "kdl")]
 pub use base::theme_file::{InvalidColor, ThemeFileError};
 pub use base::transform::Transform;
-pub use chrome::split_view::{DropZone, SplitView, SplitViewResponse};
-pub use chrome::status_bar::{
-    ModeBadge, StatusBar, StatusBarResponse, StatusLine, StatusPrompt, StatusSegment,
-};
-pub use chrome::tab_strip::{
-    TabClose, TabDrag, TabId, TabStrip, TabStripHit, TabStripResponse, TabStyle, TabWidth,
-};
-pub use chrome::title_bar::{
-    TitleAlign, TitleBar, TitleBarButton, TitleBarHit, TitleBarResponse, WindowButton,
-    WindowButtons,
-};
 pub use input::event::{
     ButtonInput, Composition, FileInput, ImeInput, Input, PointerButton, WheelDelta, WheelInput,
 };
@@ -254,78 +247,51 @@ pub use view::element::Element;
 pub use view::embed::{HostedView, ScrollStep, ViewHost};
 pub use view::settings::{Setting, SettingValue, SettingsSection};
 pub use wgpu;
-pub use widgets::breadcrumb::{Breadcrumb, BreadcrumbProps, BreadcrumbResponse, Crumb};
-pub use widgets::button::{Button, ButtonProps, ButtonResponse, ButtonVariant};
-pub use widgets::checkbox::{Checkbox, CheckboxProps, CheckboxResponse};
-pub use widgets::code_view::{CodeView, CodeViewResponse, GutterMark, Highlight};
-pub use widgets::color_field::{ColorField, ColorFieldProps, ColorFieldResponse};
-pub use widgets::command::{
-    Command, CommandError, CommandKeys, CommandRegistry, ConflictKind, InvalidKeys, KeyConflict,
-    KeyScope, MenuSlot,
-};
-pub use widgets::completion_list::{CompletionList, CompletionListResponse, CompletionRow};
-pub use widgets::dialog::{Dialog, DialogButton, DialogResponse};
-#[cfg(feature = "html")]
-pub use widgets::document::html::{ClassStyle, HtmlOptions, ImageSource};
-pub use widgets::document::{
-    Block, BlockImage, BlockStyle, Container, CustomBlock, CustomHeight, DataLink, Document,
-    Heading, HeightForWidth, HighlightedCode, Inline, Link, ListBlock, TableBlock, TableRow,
-};
-pub use widgets::drag::{
-    Drag, DragResponse, Dropped, FileDrop, FileDropEvent, FileDropped, FileHover, draw_drop_target,
-};
-pub use widgets::drop_list::{DropList, DropListResponse, DropRow};
-pub use widgets::floating_panel::{Corner, FloatingPanel, FloatingPanelResponse};
-pub use widgets::flow_list::{
-    FlowList, FlowListResponse, FlowSource, RowPointer, RowPointerKind, ScrollAlign,
-};
-pub use widgets::grid_scroll::{GridLayout, GridLine, GridScroll};
-pub use widgets::hex_view::{ByteSource, HexView, HexViewResponse};
-#[cfg(feature = "highlight")]
-pub use widgets::highlight::Highlighter;
-pub use widgets::hints::{Hints, HintsError, HintsResponse};
-pub use widgets::icon_grid::{GridData, GridSource, IconGrid, IconGridResponse};
-pub use widgets::image_view::ImageView;
-pub use widgets::info_card::InfoCard;
-pub use widgets::key_capture::{KeyCapture, KeyCaptureProps, KeyCaptureResponse, KeyEdit};
-pub use widgets::label::{
-    draw_keycap, draw_label, draw_styled_label, fit_label, label_width, styled_label_width,
-};
-pub use widgets::list_keys::ListKeys;
-pub use widgets::list_view::{List, ListResponse, ListSource, RowDrop};
-pub use widgets::menu::{Menu, MenuEntry, MenuItem, MenuResponse};
-pub use widgets::names_field::{NamesField, NamesFieldProps, NamesFieldResponse};
-pub use widgets::number_range::NumberRange;
 pub use widgets::picker;
-pub use widgets::popup::{Popup, PopupSide, draw_backdrop, draw_popup_header};
-pub use widgets::progress::{ProgressBar, ProgressProps};
-pub use widgets::quick_pick::{
-    QueryStyle, QuickPick, QuickPickPlacement, QuickPickTick, command_palette,
+// The widgets and the chrome at the root as well, as apps named them
+// before `widgets` and `chrome`; hidden from the docs, which show them
+// there.
+#[doc(hidden)]
+pub use chrome::{
+    DropZone, ModeBadge, SplitView, SplitViewResponse, StatusBar, StatusBarResponse, StatusLine,
+    StatusPrompt, StatusSegment, TabClose, TabDrag, TabId, TabStrip, TabStripHit, TabStripResponse,
+    TabStyle, TabWidth, TitleAlign, TitleBar, TitleBarButton, TitleBarHit, TitleBarResponse,
+    WindowButton, WindowButtons,
 };
-pub use widgets::radio::{RadioGroup, RadioGroupProps, RadioGroupResponse};
-pub use widgets::rich_text::{
-    ContextPress, Mark, MarkStyle, PageSize, Paged, PlacedBlock, RichText, RichTextPos,
-    RichTextResponse, ScrollAmount,
+#[cfg(feature = "highlight")]
+#[doc(hidden)]
+pub use widgets::Highlighter;
+#[doc(hidden)]
+pub use widgets::{
+    Badge, Block, BlockImage, BlockStyle, Breadcrumb, BreadcrumbProps, BreadcrumbResponse, Button,
+    ButtonProps, ButtonResponse, ButtonVariant, ByteSource, CellBorder, CellBorders, CellRange,
+    Checkbox, CheckboxProps, CheckboxResponse, CodeView, CodeViewResponse, ColorField,
+    ColorFieldProps, ColorFieldResponse, Command, CommandError, CommandKeys, CommandRegistry,
+    CompletionList, CompletionListResponse, CompletionRow, ConflictKind, Container, ContextPress,
+    Corner, Crumb, CustomBlock, CustomHeight, DataLink, Dialog, DialogButton, DialogResponse,
+    Document, Drag, DragResponse, DropList, DropListResponse, DropRow, Dropped, FileDrop,
+    FileDropEvent, FileDropped, FileHover, FloatingPanel, FloatingPanelResponse, FlowList,
+    FlowListResponse, FlowSource, GridData, GridLayout, GridLine, GridScroll, GridSource,
+    GutterMark, HeaderMenu, Heading, HeightForWidth, HexView, HexViewResponse, Highlight,
+    HighlightedCode, Hints, HintsError, HintsResponse, IconGrid, IconGridResponse, ImageView,
+    InfoCard, Inline, InvalidKeys, KeyCapture, KeyCaptureProps, KeyCaptureResponse, KeyConflict,
+    KeyEdit, KeyScope, Link, List, ListBlock, ListKeys, ListResponse, ListSource, Mark, MarkStyle,
+    Menu, MenuEntry, MenuItem, MenuResponse, MenuSlot, NamesField, NamesFieldProps,
+    NamesFieldResponse, NumberProps, NumberRange, PageSize, Paged, PlacedBlock, Popup, PopupSide,
+    ProgressBar, ProgressProps, QueryStyle, QuickPick, QuickPickPlacement, QuickPickTick,
+    RadioGroup, RadioGroupProps, RadioGroupResponse, RichText, RichTextPos, RichTextResponse,
+    RowContent, RowDrop, RowIcon, RowPointer, RowPointerKind, ScrollAlign, ScrollAmount,
+    ScrollView, ScrollViewResponse, Select, SelectProps, SelectResponse, SeverityMark, Slider,
+    SliderResponse, SortDirection, SortKey, Stepper, StepperResponse, SwitchKind, Table,
+    TableBlock, TableCellStyle, TableCells, TableColumn, TableResponse, TableRow, TableSource,
+    TextArea, TextAreaProps, TextAreaResponse, TextField, TextFieldProps, TextFieldResponse,
+    Thumbnail, Thumbnails, TileKey, TileSet, Toasts, ToastsResponse, ToolButton, Toolbar,
+    ToolbarItem, ToolbarResponse, Tooltip, TooltipPlacement, Transient, TransientCommand,
+    TransientResponse, TransientRow, TransientSwitch, TreeDrop, TreeItem, TreeItems, TreeView,
+    TreeViewResponse, Viewport, ViewportResponse, WhichKey, WhichKeyEntry, WhichKeyPlacement,
+    WhichKeyResponse, command_palette, draw_backdrop, draw_drop_target, draw_keycap, draw_label,
+    draw_popup_header, draw_styled_label, fit_label, label_width, styled_label_width,
 };
-pub use widgets::row_content::{Badge, RowContent, RowIcon};
-pub use widgets::scroll_view::{ScrollView, ScrollViewResponse};
-pub use widgets::select::{Select, SelectProps, SelectResponse};
-pub use widgets::slider::{NumberProps, Slider, SliderResponse};
-pub use widgets::stepper::{Stepper, StepperResponse};
-pub use widgets::table::{
-    CellBorder, CellBorders, CellRange, HeaderMenu, SortDirection, SortKey, Table, TableCellStyle,
-    TableCells, TableColumn, TableResponse, TableSource,
-};
-pub use widgets::text_area::{TextArea, TextAreaProps, TextAreaResponse};
-pub use widgets::text_field::{TextField, TextFieldProps, TextFieldResponse};
-pub use widgets::thumbnails::{Thumbnail, Thumbnails};
-pub use widgets::tiles::{TileKey, TileSet};
-pub use widgets::toast::{SeverityMark, Toasts, ToastsResponse};
-pub use widgets::toolbar::{ToolButton, Toolbar, ToolbarItem, ToolbarResponse};
-pub use widgets::tooltip::{Tooltip, TooltipPlacement};
-pub use widgets::transient::{
-    SwitchKind, Transient, TransientCommand, TransientResponse, TransientRow, TransientSwitch,
-};
-pub use widgets::tree_view::{TreeDrop, TreeItem, TreeItems, TreeView, TreeViewResponse};
-pub use widgets::viewport::{Viewport, ViewportResponse};
-pub use widgets::which_key::{WhichKey, WhichKeyEntry, WhichKeyPlacement, WhichKeyResponse};
+#[cfg(feature = "html")]
+#[doc(hidden)]
+pub use widgets::{ClassStyle, HtmlOptions, ImageSource};

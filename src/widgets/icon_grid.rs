@@ -50,9 +50,9 @@ use super::super::base::box_style::{Border, BoxStyle};
 use super::super::base::clock;
 use super::super::base::color::Rgba;
 use super::super::base::geometry::{Point, Rect};
-use super::super::base::key::{Key, KeyCode, Mods};
 #[cfg(test)]
 use super::super::base::key::KeyScheme;
+use super::super::base::key::{Key, KeyCode, Mods};
 use super::super::base::list::{ListState, scroll_to_show};
 use super::super::base::theme::Theme;
 use super::super::input::click::is_double_click;

@@ -66,9 +66,9 @@ use super::super::app::widget::{Lent, Outcome, Widget};
 use super::super::base::clock;
 use super::super::base::cursor::CursorIcon;
 use super::super::base::geometry::{Point, Rect};
-use super::super::base::key::{Key, Mods};
 #[cfg(test)]
 use super::super::base::key::KeyScheme;
+use super::super::base::key::{Key, Mods};
 use super::super::base::list::ListState;
 use super::super::base::styled::{StyledText, TextColor};
 use super::super::base::theme::{Theme, ThemeToken};
