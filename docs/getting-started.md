@@ -213,4 +213,4 @@ The examples each show one part of misty, most of them as tree apps like this on
 | `panes` | Split panes. |
 | `workbench` | A larger app in one tree: what misty looks like at scale. |
 
-Run any of them with `cargo run -p misty --example <name>`. The full API is documented on [docs.rs](https://docs.rs/misty); [element-tree.md](element-tree.md) explains why the element tree works as it does.
+Run any of them with `cargo run -p misty --example <name>`. The full API is documented on [docs.rs](https://docs.rs/misty); [design/element-tree.md](design/element-tree.md) records, for contributors, why the element tree works as it does.
