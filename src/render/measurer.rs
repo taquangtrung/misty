@@ -21,7 +21,7 @@ use glyphon::{FontSystem, SwashCache};
 use super::super::base::color::Rgba;
 use super::super::base::geometry::Rect;
 use super::super::base::theme::Theme;
-use super::app_fonts;
+use super::app_fonts::{self, Synced};
 use super::font::{CellMetrics, Font};
 use super::image::Image;
 use super::paragraph::{self, Paragraph, ParagraphFont, ParagraphLayout};
@@ -63,7 +63,7 @@ pub struct ParagraphMeasurer {
 /// The font system measurers shape with.
 struct Shaper {
     /// How many of the app's fonts ([`app_fonts`]) are loaded.
-    app_fonts: usize,
+    app_fonts: Synced,
     /// The font database and shaper.
     font_system: FontSystem,
     /// The glyphs rasterized for [`ParagraphMeasurer::render`].

@@ -73,6 +73,8 @@ pub struct Font {
 /// desktop sets it ([`UiFont::desktop`]), in regular and bold weights.
 #[derive(Clone, Debug, PartialEq)]
 pub struct UiFont {
+    /// The family name, or `None` for the desktop's interface family.
+    family: Option<String>,
     /// Its lines' height as a multiple of its size, or `None` for the
     /// window font's line scaled to its size.
     line_height: Option<f32>,
@@ -236,10 +238,28 @@ impl UiFont {
     /// outside 6 to 72 are drawn at the nearer bound.
     pub fn new(size: f32) -> Self {
         Self {
+            family: None,
             line_height: None,
             size,
             weights: FaceWeights::default(),
         }
+    }
+
+    /// This font in the family named `family` rather than the desktop's
+    /// interface family, for an app with an interface font of its own.
+    /// The family is the app's, in every window: the one a window was last
+    /// given, best set as the first window opens, since text already on
+    /// screen may keep the old family until it changes.
+    pub fn with_family(self, family: impl Into<String>) -> Self {
+        Self {
+            family: Some(family.into()),
+            ..self
+        }
+    }
+
+    /// The family name, or `None` for the desktop's interface family.
+    pub(crate) fn family(&self) -> Option<&str> {
+        self.family.as_deref()
     }
 
     /// This font with lines `ratio` times its size high, for an interface

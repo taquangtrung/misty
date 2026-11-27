@@ -19,7 +19,7 @@ use wgpu::{MultisampleState, RenderPass, TextureFormat};
 
 use super::super::base::geometry::Rect;
 use super::super::base::styled::FontFamily;
-use super::app_fonts;
+use super::app_fonts::{self, Synced};
 use super::draw::{Face, InlineMetrics, SegmentAlign, TextRun, TextSegment, Wrapping};
 use super::font::{CellMetrics, FaceWeights, Font};
 use super::gpu::GpuContext;
@@ -68,7 +68,7 @@ const LIGATURE_FEATURES: [FeatureTag; 4] = [
 /// the fonts scans the system, so it happens once for all windows.
 pub(crate) struct Fonts {
     /// How many of the app's fonts ([`app_fonts`]) are loaded.
-    app_fonts: usize,
+    app_fonts: Synced,
     /// The font database and shaper.
     font_system: FontSystem,
     /// Paragraphs shaped in recent frames, by their text, faces, width,
@@ -100,7 +100,7 @@ pub(crate) struct TextPipeline {
 /// The shaped text of one layer of recent frames.
 struct TextLayer {
     /// How many of the app's fonts were loaded when `cache` was shaped.
-    app_fonts: usize,
+    app_fonts: Synced,
     /// The text shaped in recent frames, by its runs and font.
     cache: ShapeCache<SegmentKey, Shaped>,
 }
@@ -217,7 +217,7 @@ impl Fonts {
 
     /// Loads the fonts the app loaded since the last call, dropping the
     /// shapes made without them; returns how many app fonts are loaded.
-    pub(crate) fn sync_app_fonts(&mut self) -> usize {
+    pub(crate) fn sync_app_fonts(&mut self) -> Synced {
         let loaded = app_fonts::sync(&mut self.font_system, self.app_fonts);
         if loaded != self.app_fonts {
             self.app_fonts = loaded;
@@ -305,7 +305,7 @@ impl TextPipeline {
         let atlas = TextAtlas::with_color_mode(&gpu.device, &gpu.queue, &cache, format, color_mode);
         let layers = (0..layers)
             .map(|_| TextLayer {
-                app_fonts: 0,
+                app_fonts: Synced::default(),
                 cache: ShapeCache::new(),
             })
             .collect();

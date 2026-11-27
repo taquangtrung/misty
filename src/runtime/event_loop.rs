@@ -39,6 +39,7 @@ use super::super::platform::schedule::{RedrawSchedule, earliest};
 use super::super::platform::waker::{UserEvent, Waker};
 use super::super::platform::window_group;
 use super::super::platform::window_id::WindowId;
+use super::super::render::app_fonts;
 use super::super::render::font::{CellMetrics, Font, UiFont};
 use super::super::render::gpu::GpuContext;
 use super::super::render::surface::WindowSurface;
@@ -204,6 +205,7 @@ impl<A: Application> Runtime<A> {
         renderer.set_texture_budget(options.texture_budget());
         let font = options.font().clone();
         let ui_font = options.ui_font().clone();
+        app_fonts::set_ui_family(ui_font.family());
         let metrics = lock(&shared.fonts).measure_cell(&font, window.scale_factor());
         let id = WindowId(window.id());
         // Made while the window is still hidden, as AccessKit requires.
@@ -351,7 +353,10 @@ impl<A: Application> Runtime<A> {
                     open.metrics = lock(&shared.fonts).measure_cell(&font, scale_factor);
                     open.font = font;
                 }
-                (WindowAction::SetUiFont(ui_font), _) => open.ui_font = ui_font,
+                (WindowAction::SetUiFont(ui_font), _) => {
+                    app_fonts::set_ui_family(ui_font.family());
+                    open.ui_font = ui_font;
+                }
                 (WindowAction::SetTransparent(transparent), Some(shared)) => {
                     // Corners misty rounds itself need the desktop behind them.
                     let transparent = transparent || open.corner_radius.is_some();
