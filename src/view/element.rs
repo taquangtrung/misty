@@ -436,6 +436,14 @@ impl<'a, A> Element<'a, A> {
         self
     }
 
+    /// This element with the theme's page inset
+    /// ([`Spacing::page_inset`](crate::Spacing::page_inset)) at its left
+    /// and right, on top of its other padding: a page's bands and content.
+    pub(crate) fn page_inset(mut self) -> Self {
+        self.extras().sizing.page_inset = true;
+        self
+    }
+
     /// What runs on the app's state when this element is laid out at
     /// another size than it was last reported at (and once when it is
     /// first laid out, or again after it was gone): its [`ElementSize`], so

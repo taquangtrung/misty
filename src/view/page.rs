@@ -71,10 +71,12 @@ const GRID_GAP_COLS: f32 = 2.0;
 /// How wide a page's sidebar is, in cell columns.
 const SIDEBAR_COLS: f32 = 22.0;
 
-/// The blank cell columns at each side of a page's heading, content, and
-/// footer, and the rows above and below its heading and footer.
-const PAGE_PADDING_COLS: f32 = 2.0;
+/// The rows above and below a page's heading and footer; the room at
+/// their sides is the theme's ([`Spacing::page_inset`](crate::Spacing)).
 const BAND_PADDING_ROWS: f32 = 0.5;
+
+/// The rows above and below a page's content under its heading.
+const CONTENT_PADDING_ROWS: f32 = 1.0;
 
 /// The rows between a page's sections, and between a section's heading
 /// and its card.
@@ -147,14 +149,22 @@ pub struct FilledPage<'a, A> {
 struct PageParts<'a, A> {
     /// The elements at the heading's right, after the scope tabs.
     actions: Vec<Element<'a, A>>,
+    /// The room above and below the content, where the app set it
+    /// ([`Page::content_padding`]); else the rows the kind of page has.
+    content_padding: Option<Space>,
     /// The details of what is selected, under the content, if any.
     footer: Option<Element<'a, A>>,
     /// The scope tabs at the heading's right, if any.
     scopes: Option<Element<'a, A>>,
     /// What chooses what the content shows, at the page's left, if any.
     sidebar: Option<Element<'a, A>>,
-    /// The page's heading.
-    title: Cow<'a, str>,
+    /// The room at the sides of the heading, content, and footer, where
+    /// the app set it ([`Page::side_padding`]); else the theme's page
+    /// inset.
+    side_padding: Option<Space>,
+    /// The page's heading, if it has one: a page whose name the tab
+    /// already says ([`untitled_page`]) has none.
+    title: Option<Cow<'a, str>>,
 }
 
 /// A group of items under a heading, in a card. Made by [`section`].
@@ -220,6 +230,24 @@ pub struct Item<'a, A> {
 // ========================================================================
 
 impl<'a, A: 'static> Page<'a, A> {
+    /// This page with `down` above and below its content, in place of the
+    /// rows misty leaves: to fit one page to what is around it, as
+    /// `Space::Cells(0.0)` puts a table's headings right under the tab that
+    /// shows it.
+    pub fn content_padding(mut self, down: Space) -> Self {
+        self.parts.content_padding = Some(down);
+        self
+    }
+
+    /// This page with `across` at each side of its heading, content, and
+    /// footer, in place of the theme's page inset
+    /// ([`Spacing::page_inset`](crate::Spacing)). To change every page, set
+    /// the theme's spacing instead.
+    pub fn side_padding(mut self, across: Space) -> Self {
+        self.parts.side_padding = Some(across);
+        self
+    }
+
     /// This page with `element` at its heading's right: a button, a menu.
     pub fn action(mut self, element: impl Into<Element<'a, A>>) -> Self {
         self.parts.actions.push(element.into());
@@ -289,17 +317,40 @@ impl<'a, A: 'static> Page<'a, A> {
 }
 
 impl<'a, A: 'static> PageParts<'a, A> {
+    /// `content` with the page's room around it: at its sides as the
+    /// bands have, and above and below a row under a heading, as little as
+    /// the bands have on a page without one, so what it shows starts at
+    /// its top.
+    fn pad_content(&self, content: Element<'a, A>) -> Element<'a, A> {
+        let down = match (self.content_padding, &self.title) {
+            (Some(down), _) => down,
+            (None, Some(_)) => Space::Cells(CONTENT_PADDING_ROWS),
+            (None, None) => Space::Cells(BAND_PADDING_ROWS),
+        };
+        padded(content, self.side_padding, down)
+    }
+
+    /// A band of the page, its heading or its footer, with the page's room
+    /// at its sides.
+    fn pad_band(&self, band: Element<'a, A>) -> Element<'a, A> {
+        padded(band, self.side_padding, Space::Cells(BAND_PADDING_ROWS))
+    }
+
     /// The page laid out around `content`: the heading over a line, then
     /// the sidebar beside the content, then the footer under a line.
-    fn around(self, content: Element<'a, A>) -> Element<'a, A> {
-        let mut heading = vec![
-            ui(self.title).emphasized().into(),
-            column(Vec::new()).grow(1.0),
-        ];
-        heading.extend(self.scopes);
-        heading.extend(self.actions);
-        let heading = row(heading).padding(PAGE_PADDING_COLS, BAND_PADDING_ROWS);
-        let body = match self.sidebar {
+    fn around(mut self, content: Element<'a, A>) -> Element<'a, A> {
+        let has_heading = self.title.is_some() || self.scopes.is_some() || !self.actions.is_empty();
+        let mut heading: Vec<Element<'a, A>> = self
+            .title
+            .as_ref()
+            .map(|title| ui(title.clone()).emphasized().into())
+            .into_iter()
+            .collect();
+        heading.push(column(Vec::new()).grow(1.0));
+        heading.extend(self.scopes.take());
+        heading.extend(std::mem::take(&mut self.actions));
+        let heading = self.pad_band(row(heading));
+        let body = match self.sidebar.take() {
             Some(sidebar) => row([
                 column([sidebar])
                     .width(Extent::Cells(SIDEBAR_COLS))
@@ -314,10 +365,13 @@ impl<'a, A: 'static> PageParts<'a, A> {
         .gap(Space::Cells(0.0))
         .align(Align::Stretch)
         .grow(1.0);
-        let mut parts = vec![heading, divider(), body];
-        if let Some(footer) = self.footer {
+        let mut parts = match has_heading {
+            true => vec![heading, divider(), body],
+            false => vec![body],
+        };
+        if let Some(footer) = self.footer.take() {
             parts.push(divider());
-            parts.push(column([footer]).padding(PAGE_PADDING_COLS, BAND_PADDING_ROWS));
+            parts.push(self.pad_band(column([footer])));
         }
         column(parts).gap(Space::Cells(0.0)).grow(1.0)
     }
@@ -353,8 +407,9 @@ impl<'a, A: 'static> FilledPage<'a, A> {
 
 impl<'a, A: 'static> From<ScrollingPage<'a, A>> for Element<'a, A> {
     fn from(page: ScrollingPage<'a, A>) -> Self {
-        let mut content = column([page.content])
-            .padding(PAGE_PADDING_COLS, 1.0)
+        let mut content = page
+            .parts
+            .pad_content(column([page.content]))
             .scroll()
             .grow(1.0);
         if let Some(id) = page.scroll_id {
@@ -368,8 +423,9 @@ impl<'a, A: 'static> From<FilledPage<'a, A>> for Element<'a, A> {
     fn from(page: FilledPage<'a, A>) -> Self {
         // The content takes all the room, for what scrolls inside it to
         // fill, its scrollbar in the padding at the page's edge.
-        let content = column([page.content.grow(1.0)])
-            .padding(PAGE_PADDING_COLS, 1.0)
+        let content = page
+            .parts
+            .pad_content(column([page.content.grow(1.0)]))
             .bars_in_padding()
             .grow(1.0);
         page.parts.around(content)
@@ -670,6 +726,24 @@ impl<'a, A: 'static> From<Item<'a, A>> for Element<'a, A> {
 // Functions
 // ========================================================================
 
+/// `element` with `across` at its sides, the theme's page inset where
+/// that is `None`, and `down` above and below it.
+fn padded<A>(element: Element<'_, A>, across: Option<Space>, down: Space) -> Element<'_, A> {
+    let split = |space: Space| match space {
+        Space::Cells(cells) => (cells, 0.0),
+        Space::Px(px) => (0.0, px),
+    };
+    let (columns, across_px) = across.map_or((0.0, 0.0), split);
+    let (rows, down_px) = split(down);
+    let shown = element
+        .padding(columns, rows)
+        .padding_px(across_px, down_px);
+    match across {
+        None => shown.page_inset(),
+        Some(_) => shown,
+    }
+}
+
 /// A page headed `title`, with nothing in it yet: give it a sidebar, scope
 /// tabs, and actions as it has them, then its content as a scrolling or a
 /// filled page ([`Page::scrolling`], [`Page::filled`]), and a footer.
@@ -677,10 +751,29 @@ pub fn page<'a, A: 'static>(title: impl Into<Cow<'a, str>>) -> Page<'a, A> {
     Page {
         parts: PageParts {
             actions: Vec::new(),
+            content_padding: None,
             footer: None,
             scopes: None,
             sidebar: None,
-            title: title.into(),
+            side_padding: None,
+            title: Some(title.into()),
+        },
+    }
+}
+
+/// A page with no heading, for one whose tab already names it, with
+/// nothing in it yet: what it shows starts at its top. Built on as
+/// [`page`] is; scope tabs or actions given it still go in a heading band.
+pub fn untitled_page<'a, A: 'static>() -> Page<'a, A> {
+    Page {
+        parts: PageParts {
+            actions: Vec::new(),
+            content_padding: None,
+            footer: None,
+            scopes: None,
+            sidebar: None,
+            side_padding: None,
+            title: None,
         },
     }
 }
@@ -865,11 +958,11 @@ fn rule<'a, A: 'static>(token: ThemeToken, thickness: f32) -> Element<'a, A> {
 mod tests {
     use accesskit::Role;
 
-    use super::super::super::base::theme::Theme;
+    use super::super::super::base::theme::{Spacing, Theme};
     use super::super::super::platform::window_id::WindowId;
     use super::super::super::testing::TreeWindow;
     use super::super::app::App;
-    use super::super::controls::checkbox;
+    use super::super::controls::{button, checkbox};
     use super::*;
 
     /// A page of two sections, the second holding a checkbox.
@@ -1025,6 +1118,109 @@ mod tests {
             crate::testing::nested_scrolls(filled.frame()),
             Vec::<String>::new()
         );
+    }
+
+    /// A page holding one button, headed or not, padded as it asks.
+    struct Padded {
+        content_padding: Option<Space>,
+        side_padding: Option<Space>,
+        theme: Theme,
+        titled: bool,
+    }
+
+    impl Padded {
+        fn untitled() -> Self {
+            Self {
+                content_padding: None,
+                side_padding: None,
+                theme: Theme::dark(),
+                titled: false,
+            }
+        }
+
+        /// Where the button's face starts, at its left and its top, in a
+        /// window at scale 1.
+        fn button_corner(self) -> (f32, f32) {
+            let window = TreeWindow::new(self, "padded", 600, 400);
+            let tree = crate::testing::access_tree(window.frame(), "padded");
+            let (_, node) = tree
+                .nodes
+                .iter()
+                .find(|(_, node)| node.role() == Role::Button)
+                .unwrap();
+            let bounds = node.bounds().unwrap();
+            (bounds.x0 as f32, bounds.y0 as f32)
+        }
+    }
+
+    impl App for Padded {
+        fn view(&self, _window: WindowId) -> Element<'_, Self> {
+            let mut shown = match self.titled {
+                true => page("Padded"),
+                false => untitled_page(),
+            };
+            if let Some(down) = self.content_padding {
+                shown = shown.content_padding(down);
+            }
+            if let Some(across) = self.side_padding {
+                shown = shown.side_padding(across);
+            }
+            shown.filled(column([button("Go").into()])).into()
+        }
+
+        fn theme(&self) -> &Theme {
+            &self.theme
+        }
+    }
+
+    #[test]
+    fn test_an_untitled_page_draws_no_heading_and_starts_higher() {
+        let titled = TreeWindow::new(
+            Padded {
+                titled: true,
+                ..Padded::untitled()
+            },
+            "padded",
+            600,
+            400,
+        );
+        assert!(titled.drawn_text().iter().any(|line| line == "Padded"));
+        let untitled = TreeWindow::new(Padded::untitled(), "padded", 600, 400);
+        assert!(!untitled.drawn_text().iter().any(|line| line == "Padded"));
+        let (_, top) = Padded::untitled().button_corner();
+        let (_, titled_top) = Padded {
+            titled: true,
+            ..Padded::untitled()
+        }
+        .button_corner();
+        assert!(top < titled_top, "{top} against {titled_top}");
+    }
+
+    #[test]
+    fn test_the_themes_page_inset_sets_where_a_page_starts() {
+        let inset = |page_inset| {
+            Padded {
+                theme: Theme {
+                    spacing: Spacing { page_inset },
+                    ..Theme::dark()
+                },
+                ..Padded::untitled()
+            }
+            .button_corner()
+            .0
+        };
+        assert_eq!(inset(30) - inset(6), 24.0);
+    }
+
+    #[test]
+    fn test_a_pages_own_padding_overrides_the_theme() {
+        let (left, top) = Padded {
+            content_padding: Some(Space::Cells(0.0)),
+            side_padding: Some(Space::Px(0.0)),
+            ..Padded::untitled()
+        }
+        .button_corner();
+        assert_eq!((left, top), (0.0, 0.0));
     }
 
     #[test]

@@ -126,7 +126,8 @@ pub use fields::{ColorField, KeyCapture, NamesField, color_field, key_capture, n
 pub use lazy::{LazyColumn, LazySource, lazy_column};
 pub use page::{
     FilledPage, Item, Page, ScrollingPage, Section, SectionHeader, badge, divider, grid, item,
-    keycap, page, proportional_keycap, section, section_header, sidebar, vertical_divider,
+    keycap, page, proportional_keycap, section, section_header, sidebar, untitled_page,
+    vertical_divider,
 };
 pub use pick::{QuickPick, quick_pick};
 pub use popups::{

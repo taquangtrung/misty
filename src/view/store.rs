@@ -413,6 +413,8 @@ struct Room {
     bar_room: Option<BarRoom>,
     /// The frame's cell size.
     metrics: CellMetrics,
+    /// The theme's page inset, in logical pixels.
+    page_inset: u16,
     /// The frame's scale factor.
     scale: f64,
 }
@@ -485,6 +487,7 @@ impl Store {
         let room = Room {
             bar_room: None,
             metrics: frame.cell_metrics(),
+            page_inset: theme.spacing.page_inset,
             scale: frame.scale_factor(),
         };
         self.metrics = Some(room.metrics);
@@ -2729,7 +2732,9 @@ fn bar_outset(room: Room, rect: Rect) -> f32 {
 /// and the pixels `sizing` adds, in physical pixels in `room`.
 fn padding((columns, rows): (f32, f32), sizing: Option<&Sizing>, room: Room) -> Edges {
     let metrics = room.metrics;
-    let pixels = sizing.map_or(Edges::default(), |sizing| sizing.padding(room.scale));
+    let pixels = sizing.map_or(Edges::default(), |sizing| {
+        sizing.padding(room.page_inset, room.scale)
+    });
     Edges {
         bottom: rows * metrics.height + pixels.bottom,
         left: columns * metrics.width + pixels.left,

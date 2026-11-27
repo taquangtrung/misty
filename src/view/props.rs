@@ -194,6 +194,11 @@ pub(crate) struct Sizing {
     pub(crate) min_height: Option<Extent>,
     /// The narrowest it may be.
     pub(crate) min_width: Option<Extent>,
+    /// Whether it has the theme's page inset ([`Spacing::page_inset`]) at
+    /// its left and right, on top of its other padding.
+    ///
+    /// [`Spacing::page_inset`]: crate::Spacing::page_inset
+    pub(crate) page_inset: bool,
     /// The blank space inside it in logical pixels, across and down.
     pub(crate) padding_px: Option<(f32, f32)>,
     /// How much it gives up when its siblings do not fit.
@@ -372,9 +377,13 @@ impl<A> Default for Extras<'_, A> {
 // ========================================================================
 
 impl Sizing {
-    /// The padding in logical pixels, in physical pixels at `scale`.
-    pub(crate) fn padding(&self, scale: f64) -> Edges {
-        let (across, down) = self.padding_px.unwrap_or((0.0, 0.0));
+    /// The padding in logical pixels, the theme's `page_inset` among it
+    /// where it takes it, in physical pixels at `scale`.
+    pub(crate) fn padding(&self, page_inset: u16, scale: f64) -> Edges {
+        let (mut across, down) = self.padding_px.unwrap_or((0.0, 0.0));
+        if self.page_inset {
+            across += f32::from(page_inset);
+        }
         let scale = scale as f32;
         Edges::symmetric(across * scale, down * scale)
     }

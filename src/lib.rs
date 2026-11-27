@@ -208,7 +208,7 @@ pub use base::syntax::SyntaxColors;
 pub use base::text::{
     ELLIPSIS, char_width, fit as fit_text, truncate as truncate_text, width as text_width,
 };
-pub use base::theme::{ChromeText, Emphasis, Shape, ShapeShadow, Theme, ThemeToken};
+pub use base::theme::{ChromeText, Emphasis, Shape, ShapeShadow, Spacing, Theme, ThemeToken};
 #[cfg(feature = "kdl")]
 pub use base::theme_file::{InvalidColor, ThemeFileError};
 pub use base::transform::Transform;

@@ -185,6 +185,10 @@ pub struct Theme {
     /// ones cast a shadow: [`Shape::GRID`] or [`Shape::MODERN`], or one of
     /// the app's own.
     pub shape: Shape,
+    /// How much room misty's layouts leave around what they hold, such as
+    /// a page's side margins: [`Spacing::STANDARD`], or the app's own to fit
+    /// its pages to the rest of its window.
+    pub spacing: Spacing,
     /// The words misty's widgets show and tell screen readers (a title
     /// bar's button names, a tree's loading row), English in the built-in
     /// themes; set them to translate every widget.
@@ -312,6 +316,16 @@ pub struct ShapeShadow {
     pub offset_y: i16,
 }
 
+/// How much room misty's layouts leave around what they hold, in whole
+/// logical pixels.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct Spacing {
+    /// The blank space at each side of a page's heading, content, and
+    /// footer ([`page`](crate::view::page)), which a page's own
+    /// [`Page::side_padding`](crate::view::Page::side_padding) overrides.
+    pub page_inset: u16,
+}
+
 // ========================================================================
 // Theme Implementations
 // ========================================================================
@@ -347,6 +361,7 @@ impl Theme {
             selected_row: Rgb::new(0x58, 0x5b, 0x70),
             selection: Rgb::new(0x58, 0x5b, 0x70),
             shape: Shape::MODERN,
+            spacing: Spacing::STANDARD,
             strings: Strings::english(),
             surface: Rgb::new(0x18, 0x18, 0x25),
             syntax: dark_syntax(),
@@ -384,6 +399,7 @@ impl Theme {
             selected_row: Rgb::new(0xac, 0xb0, 0xbe),
             selection: Rgb::new(0xac, 0xb0, 0xbe),
             shape: Shape::MODERN,
+            spacing: Spacing::STANDARD,
             strings: Strings::english(),
             surface: Rgb::new(0xe6, 0xe9, 0xef),
             syntax: light_syntax(),
@@ -589,6 +605,16 @@ impl Shape {
             ..self.flat_box(fill, border, scale_factor)
         }
     }
+}
+
+// ========================================================================
+// Spacing Implementations
+// ========================================================================
+
+impl Spacing {
+    /// The room the built-in themes leave: about two text columns at each
+    /// side of a page.
+    pub const STANDARD: Self = Self { page_inset: 18 };
 }
 
 // ========================================================================
