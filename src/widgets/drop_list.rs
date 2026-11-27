@@ -15,7 +15,7 @@
 //! view's cell grid, whose rows may nest and fold (an outline, a table of
 //! contents). For matches offered while the user types, sized to them and
 //! hung from the text they complete, use a
-//! [`CompletionList`](crate::CompletionList).
+//! [`CompletionList`](crate::widgets::CompletionList).
 
 use super::super::app::context::EventCx;
 use super::super::app::frame::Frame;

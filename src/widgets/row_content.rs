@@ -1,9 +1,9 @@
 //! [`RowContent`]: what one row of a list-like widget shows when plain
 //! text is not enough: a leading icon, styled text (match highlights, muted
 //! parts), and short badges at the end, such as a file's git status letter
-//! or a tag's colored dot. A [`List`](crate::List), a
-//! [`Table`](crate::Table)'s cells, a [`TreeView`](crate::TreeView)'s
-//! items, and an [`IconGrid`](crate::IconGrid)'s labels take it; their
+//! or a tag's colored dot. A [`List`](crate::widgets::List), a
+//! [`Table`](crate::widgets::Table)'s cells, a [`TreeView`](crate::widgets::TreeView)'s
+//! items, and an [`IconGrid`](crate::widgets::IconGrid)'s labels take it; their
 //! sources give plain text unless they say more. Rows are set on the cell
 //! grid unless the widget lays them out in the proportional font
 //! ([`RowFont`]).
@@ -44,7 +44,8 @@ const TEXT_COLOR: TextColor = TextColor::Token(ThemeToken::Foreground);
 /// and badges at the row's end.
 ///
 /// ```
-/// use misty::{Badge, RowContent, Span, StyledText, ThemeToken};
+/// use misty::{Span, StyledText, ThemeToken};
+/// use misty::widgets::{Badge, RowContent};
 ///
 /// let row = RowContent::styled(
 ///     StyledText::new()

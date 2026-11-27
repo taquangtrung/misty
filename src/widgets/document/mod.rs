@@ -1,4 +1,4 @@
-//! [`Document`]: rich prose as blocks, for [`RichText`](crate::RichText)
+//! [`Document`]: rich prose as blocks, for [`RichText`](crate::widgets::RichText)
 //! to lay out, scroll, select, and search: a dictionary entry, a chapter
 //! of a book, a Markdown preview. It is a plain model, not HTML: an app
 //! builds it in code, or converts Markdown (the `markdown` feature,
@@ -10,7 +10,7 @@
 //! block quotes, code blocks, rules, tables of blocks, images, and
 //! [`Container`]s that set a group of blocks in a box (indented, filled,
 //! bordered), as a dictionary's section is. Headings and containers may
-//! carry an id, an anchor [`RichText::scroll_to_anchor`](crate::RichText::scroll_to_anchor)
+//! carry an id, an anchor [`RichText::scroll_to_anchor`](crate::widgets::RichText::scroll_to_anchor)
 //! jumps to.
 //!
 //! A [`Block::Aligned`] sets the lines of the paragraphs and headings
@@ -19,7 +19,7 @@
 //! does; code keeps to the start, and the innermost alignment wins. A
 //! [`Block::Styled`] sets the blocks inside it as its [`BlockStyle`] says:
 //! a line height of their own, which wins over the view's
-//! [`RichText::set_line_height`](crate::RichText::set_line_height), and
+//! [`RichText::set_line_height`](crate::widgets::RichText::set_line_height), and
 //! the scale of their headings, in place of the level's
 //! [`Heading::SCALES`].
 //!
@@ -31,10 +31,10 @@
 //! A [`Block::Custom`] is room the app paints itself (a formula, a chart,
 //! a page of another format): the document gives it the column's width and
 //! the height its [`CustomHeight`] asks for, and
-//! [`RichText::custom_blocks`](crate::RichText::custom_blocks) says where
+//! [`RichText::custom_blocks`](crate::widgets::RichText::custom_blocks) says where
 //! each one in sight landed. A [`Block::HighlightedCode`] is a code block
 //! colored by the [`Highlight`] spans a
-//! [`Highlighter`](crate::Highlighter) (or any highlighter) gives, in the
+//! [`Highlighter`](crate::widgets::Highlighter) (or any highlighter) gives, in the
 //! theme's [`SyntaxColors`](crate::SyntaxColors).
 
 use std::fmt;
@@ -169,10 +169,10 @@ pub struct Inline {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Link {
     /// An app-defined key, such as a dictionary cross-reference or an
-    /// audio button: [`RichTextResponse::Data`](crate::RichTextResponse::Data).
+    /// audio button: [`RichTextResponse::Data`](crate::widgets::RichTextResponse::Data).
     Data(DataLink),
     /// A URL or another target the app resolves:
-    /// [`RichTextResponse::Link`](crate::RichTextResponse::Link).
+    /// [`RichTextResponse::Link`](crate::widgets::RichTextResponse::Link).
     Href(String),
 }
 
@@ -206,7 +206,7 @@ pub struct Container {
 
 /// Room in a [`Document`] the app paints itself: a formula, a chart, an
 /// embedded page. It takes the whole width of the column it is in;
-/// [`RichText::custom_blocks`](crate::RichText::custom_blocks) gives the
+/// [`RichText::custom_blocks`](crate::widgets::RichText::custom_blocks) gives the
 /// rectangle of each one in sight after a frame, to paint in.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CustomBlock {

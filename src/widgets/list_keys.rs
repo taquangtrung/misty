@@ -84,7 +84,7 @@ const SCROLL_PREFIX: char = 'z';
 /// a prefix (`g`, `z`), plus the half-page amount a count before `C-d` or
 /// `C-u` set. Each list-like widget keeps one; read it through the
 /// widget's `keys` to show what is pending in a status bar or a
-/// [`WhichKey`](crate::WhichKey) popup. The widget drops what is pending
+/// [`WhichKey`](crate::widgets::WhichKey) popup. The widget drops what is pending
 /// on a mouse press or wheel scroll over it and when the window loses
 /// focus, as Vim does.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -213,7 +213,7 @@ impl ListKeys {
 
     /// The keys that may follow the pending prefix and what each does, in
     /// `strings`' words (pass the theme's, `&theme.strings`), for
-    /// [`WhichKey::set_pending`](crate::WhichKey::set_pending); empty when
+    /// [`WhichKey::set_pending`](crate::widgets::WhichKey::set_pending); empty when
     /// no prefix is pending.
     pub fn hints(&self, strings: &Strings) -> Vec<WhichKeyEntry> {
         let hints: &[(char, &str)] = match self.prefix.map(|prefix| prefix.code) {

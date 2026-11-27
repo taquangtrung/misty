@@ -15,12 +15,8 @@
 
 use std::time::Instant;
 
-use misty::{
-    AppContext, Application, Block, BlockImage, Container, DataLink, Document, Error, Frame,
-    Heading, Image, Inline, Input, Key, KeyCode, Link, ListBlock, Mods, Paragraph, Rect, Rgba,
-    RichText, RichTextResponse, Span, TableBlock, TableRow, TextColor, Theme, ThemeToken, Widget,
-    WindowId, WindowOptions,
-};
+use misty::{AppContext, Application, Error, Frame, Image, Input, Key, KeyCode, Mods, Paragraph, Rect, Rgba, Span, TextColor, Theme, ThemeToken, Widget, WindowId, WindowOptions};
+use misty::widgets::{Block, BlockImage, Container, DataLink, Document, Heading, Inline, Link, ListBlock, RichText, RichTextResponse, TableBlock, TableRow};
 
 // ========================================================================
 // Constants

@@ -17,11 +17,8 @@
 
 use std::time::{Duration, Instant};
 
-use misty::{
-    AppContext, Application, Button, ButtonResponse, ButtonVariant, Corner, Easing, Error,
-    FloatingPanel, FloatingPanelResponse, Frame, Input, Key, KeyCode, Mods, Paragraph, Point, Rect,
-    Rgba, TextColor, Theme, ThemeToken, Tween, Widget, WindowId, WindowOptions,
-};
+use misty::{AppContext, Application, Easing, Error, Frame, Input, Key, KeyCode, Mods, Paragraph, Point, Rect, Rgba, TextColor, Theme, ThemeToken, Tween, Widget, WindowId, WindowOptions};
+use misty::widgets::{Button, ButtonResponse, ButtonVariant, Corner, FloatingPanel, FloatingPanelResponse};
 
 // ========================================================================
 // Constants

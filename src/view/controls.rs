@@ -732,7 +732,7 @@ impl<'a, A> TextField<'a, A> {
     /// This field masking its text, as a password field does, while the
     /// app builds it so: a dot for each character, nothing copied or cut
     /// to the clipboard, and a password field to screen readers, as
-    /// [`TextField::with_mask`](crate::TextField::with_mask) says. The
+    /// [`TextField::with_mask`](crate::widgets::TextField::with_mask) says. The
     /// text still reaches [`TextField::on_change`].
     pub fn masked(self) -> Self {
         Self {

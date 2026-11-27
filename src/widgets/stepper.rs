@@ -8,7 +8,7 @@
 //! steps; Home and End set the smallest and largest value. A click on the
 //! minus or plus button steps it; a button is drawn muted at its end of
 //! the range. The number is not typed: an app that wants a typed number
-//! uses a [`TextField`](crate::TextField). A disabled stepper is drawn
+//! uses a [`TextField`](crate::widgets::TextField). A disabled stepper is drawn
 //! muted and takes no input.
 
 use accesskit::{Action, Node, Role};

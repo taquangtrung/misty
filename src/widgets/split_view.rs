@@ -9,7 +9,7 @@
 //! content.
 //!
 //! A [`DropZone`] names where in a pane something dragged over it (a tab
-//! from a [`TabStrip`](crate::TabStrip)) would dock: a side to split the
+//! from a [`TabStrip`](crate::widgets::TabStrip)) would dock: a side to split the
 //! pane toward, or its center to join it.
 
 use super::super::app::context::EventCx;

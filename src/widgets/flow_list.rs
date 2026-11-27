@@ -6,17 +6,17 @@
 //! and drawn, so a list of a million rows costs no more than one of
 //! twenty.
 //!
-//! It is a widget of its own rather than a mode of [`List`](crate::List):
+//! It is a widget of its own rather than a mode of [`List`](crate::widgets::List):
 //! a list's rows are one cell high, so its scroll, glide, page keys, and
-//! hit testing count whole rows, which a [`Table`](crate::Table) and a
-//! [`TreeView`](crate::TreeView) share. Here the scroll is a row at the
+//! hit testing count whole rows, which a [`Table`](crate::widgets::Table) and a
+//! [`TreeView`](crate::widgets::TreeView) share. Here the scroll is a row at the
 //! top and how many pixels of it are scrolled out of sight, so the row at
 //! the top stays where it is when rows are measured again (after
 //! [`FlowList::invalidate_heights`]) or the width changes, and the reader
 //! keeps their place.
 //!
 //! Keys, through the lent [`Widget::handle`](crate::Widget::handle), are
-//! the ones every list-like widget shares (see [`List`](crate::List)):
+//! the ones every list-like widget shares (see [`List`](crate::widgets::List)):
 //! Up and Down (`k`, `j`, `C-p`, `C-n`) move the cursor a row and scroll
 //! it into sight, `C-f` and `C-b` (Page Down and Page Up) scroll a screen
 //! less two rows, `C-d` and `C-u` half a screen, `C-e` and `C-y` a row,
@@ -276,7 +276,7 @@ impl FlowList {
     }
 
     /// The count and prefix typed toward a motion, to show in a status bar
-    /// or a [`WhichKey`](crate::WhichKey) popup.
+    /// or a [`WhichKey`](crate::widgets::WhichKey) popup.
     pub fn keys(&self) -> &ListKeys {
         &self.keys
     }

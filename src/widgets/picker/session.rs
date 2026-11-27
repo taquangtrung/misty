@@ -219,7 +219,7 @@ pub enum PreviewUpdate<P> {
 /// [`Picker::view`]. Fields are added over time, so it is only read, never
 /// built.
 ///
-/// [`QuickPick`]: crate::QuickPick
+/// [`QuickPick`]: crate::widgets::QuickPick
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub struct SessionView {

@@ -378,7 +378,7 @@ impl Frame {
     /// resolve against `theme`: the default ones to its foreground and
     /// background, an indexed one to its palette's entry.
     ///
-    /// [`CellColor`]: crate::CellColor
+    /// [`CellColor`]: crate::grid::CellColor
     pub fn draw_cells(
         &mut self,
         source: &(impl CellSource + ?Sized),

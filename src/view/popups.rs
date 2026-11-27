@@ -1472,7 +1472,8 @@ pub fn menu<'a, A, I: Copy>(label: &'a str, entries: Vec<MenuEntry<I>>) -> Menu<
 ///
 /// ```
 /// use misty::view::{MenuRequest, column, context_menu, text};
-/// use misty::{App, Element, MenuEntry, MenuItem, Theme, WindowId};
+/// use misty::{App, Element, Theme, WindowId};
+/// use misty::widgets::{MenuEntry, MenuItem};
 ///
 /// struct Notes {
 ///     menu: Option<MenuRequest>,

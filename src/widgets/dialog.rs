@@ -10,7 +10,7 @@
 //! nothing, so a stray click never answers a question.
 //!
 //! A dialog built [`Dialog::with_content`] keeps room under its body for a
-//! widget of the app's, such as a [`List`](crate::List) to choose from or
+//! widget of the app's, such as a [`List`](crate::widgets::List) to choose from or
 //! toggle rows in. The dialog draws its box around the room and says where
 //! it is ([`Dialog::content_rect`]); the app draws its widget there after
 //! the dialog, in the frame's overlay. The content has the focus when the

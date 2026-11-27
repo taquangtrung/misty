@@ -300,8 +300,8 @@ impl<I: Copy + PartialEq> Toolbar<I> {
     /// Where the button under the pointer was drawn and its tooltip (its
     /// tooltip or command title, with its keys), while the pointer is over
     /// a button that has one; hand them to
-    /// [`Tooltip::hover`](crate::Tooltip::hover), and call
-    /// [`Tooltip::leave`](crate::Tooltip::leave) when this is `None`.
+    /// [`Tooltip::hover`](crate::widgets::Tooltip::hover), and call
+    /// [`Tooltip::leave`](crate::widgets::Tooltip::leave) when this is `None`.
     pub fn tooltip_hover(&self) -> Option<(Rect, String)> {
         let stop = self.hovered?;
         let rect = self.stop_rect(stop)?;

@@ -20,10 +20,10 @@
 //! [`TabDrag`] saying which tab and where the pointer is. Over another
 //! strip, show where it would land with [`TabStrip::show_drop_marker`] and
 //! move it there with [`TabStrip::drop_index`] and [`TabStrip::insert`];
-//! over a pane, [`DropZone::at`](crate::DropZone::at) says which side it
+//! over a pane, [`DropZone::at`](crate::widgets::DropZone::at) says which side it
 //! would split (or the center, to join that pane's tabs) and
-//! [`draw_drop_target`](crate::draw_drop_target) over its
-//! [`DropZone::rect`](crate::DropZone::rect) shows it.
+//! [`draw_drop_target`](crate::widgets::draw_drop_target) over its
+//! [`DropZone::rect`](crate::widgets::DropZone::rect) shows it.
 //!
 //! A tab may show an icon from the app's [`IconSet`] before its title
 //! ([`TabStrip::set_icon`]), a spinner in place of its close button while

@@ -1306,7 +1306,7 @@ impl<'a, A> StatusBar<'a, A> {
     }
 
     /// What runs, with the segment's id, when the user clicks a segment
-    /// given an id ([`StatusSegment::with_id`](crate::StatusSegment::with_id)).
+    /// given an id ([`StatusSegment::with_id`](crate::widgets::StatusSegment::with_id)).
     pub fn on_click(self, apply: impl Fn(&mut A, &'static str) + 'static) -> Self {
         Self {
             on_click: Some(Rc::new(apply)),

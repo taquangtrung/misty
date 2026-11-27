@@ -1,5 +1,5 @@
 //! [`Highlighter`], behind the `highlight` feature: [`Highlight`] spans
-//! for a [`CodeView`](crate::CodeView) from the TextMate grammars VS Code
+//! for a [`CodeView`](crate::widgets::CodeView) from the TextMate grammars VS Code
 //! ships, through iris (Rust, Python, C, JavaScript, Markdown, HTML, JSON,
 //! and some eighty more, embedded languages included), named with the
 //! highlight names misty's themes color (`keyword`, `string`, `function`,

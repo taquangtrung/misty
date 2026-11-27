@@ -16,11 +16,8 @@
 
 use std::time::Instant;
 
-use misty::{
-    AppContext, Application, Error, Frame, GridScroll, Image, ImageView, Input, Key, KeyCode, Mods,
-    Point, Rect, Rgba, Stroke, StyledText, TextColor, Theme, VectorPath, Viewport, Widget,
-    WindowId, WindowOptions,
-};
+use misty::{AppContext, Application, Error, Frame, Image, Input, Key, KeyCode, Mods, Point, Rect, Rgba, Stroke, StyledText, TextColor, Theme, VectorPath, Widget, WindowId, WindowOptions};
+use misty::widgets::{GridScroll, ImageView, Viewport};
 
 // ========================================================================
 // Constants

@@ -22,10 +22,8 @@
 use misty::view::{
     checkbox, column, field, form, progress, radio, select, slider, stepper, text, text_area,
 };
-use misty::{
-    App, AppCx, Appearance, Element, Key, KeyCode, KeyScheme, LabelFont, Mods, NumberRange, Size,
-    Theme, ThemeToken, WindowId, WindowOptions,
-};
+use misty::{App, AppCx, Appearance, Element, Key, KeyCode, KeyScheme, LabelFont, Mods, Size, Theme, ThemeToken, WindowId, WindowOptions};
+use misty::widgets::NumberRange;
 
 // ========================================================================
 // Constants

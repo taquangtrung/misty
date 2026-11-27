@@ -12,7 +12,7 @@
 //! Use a `CompletionList` for matches offered while the user types: it
 //! sizes itself to them and hangs from the text they complete. For a list
 //! the app lays over its own view, on its cell grid, with rows that nest
-//! and fold (an outline), use a [`DropList`](crate::DropList).
+//! and fold (an outline), use a [`DropList`](crate::widgets::DropList).
 
 use super::super::app::context::EventCx;
 use super::super::app::frame::Frame;

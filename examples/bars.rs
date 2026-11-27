@@ -26,11 +26,8 @@ use misty::view::{
     MenuRequest, button, column, context_menu, field, form, list, overlay, radio, split,
     status_bar, stepper, tab, tab_strip, text, text_area, title_bar, which_key,
 };
-use misty::{
-    App, AppCx, Axis, Decorations, Element, Key, KeyCode, ListSource, MenuEntry, MenuItem, Mods,
-    NumberRange, Point, Size, StatusLine, StatusSegment, StyledText, Theme, ThemeToken,
-    WhichKeyEntry, WindowId, WindowOptions,
-};
+use misty::{App, AppCx, Axis, Decorations, Element, Key, KeyCode, Mods, Point, Size, StyledText, Theme, ThemeToken, WindowId, WindowOptions};
+use misty::widgets::{ListSource, MenuEntry, MenuItem, NumberRange, StatusLine, StatusSegment, WhichKeyEntry};
 
 // ========================================================================
 // Constants

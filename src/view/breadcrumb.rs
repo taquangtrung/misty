@@ -2,7 +2,7 @@
 //! segments) each going there, as an element over the [`Breadcrumb`]
 //! widget, for the header of a pane or a page.
 //!
-//! [`Breadcrumb`]: crate::Breadcrumb
+//! [`Breadcrumb`]: crate::widgets::Breadcrumb
 
 use std::rc::Rc;
 

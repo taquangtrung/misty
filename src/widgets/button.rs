@@ -12,7 +12,7 @@
 //! it. A disabled button is drawn muted and leaves every input alone.
 //!
 //! A button keeps a tooltip text for the app to show with a
-//! [`Tooltip`](crate::Tooltip): [`Button::tooltip_hover`] says where and
+//! [`Tooltip`](crate::widgets::Tooltip): [`Button::tooltip_hover`] says where and
 //! what while the pointer is over it.
 
 use std::time::Instant;
@@ -283,8 +283,8 @@ impl Button {
 
     /// Where the button was drawn and its tooltip text, while the pointer
     /// is over it and it has a tooltip; hand them to
-    /// [`Tooltip::hover`](crate::Tooltip::hover), and call
-    /// [`Tooltip::leave`](crate::Tooltip::leave) when this is `None`.
+    /// [`Tooltip::hover`](crate::widgets::Tooltip::hover), and call
+    /// [`Tooltip::leave`](crate::widgets::Tooltip::leave) when this is `None`.
     pub fn tooltip_hover(&self) -> Option<(Rect, &str)> {
         let rect = self.layout.filter(|_| self.hovered)?;
         Some((rect, self.tooltip.as_deref()?))

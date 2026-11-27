@@ -333,7 +333,7 @@ pub struct ContextPress {
     pub pos: RichTextPos,
 }
 
-/// Where a document's [`CustomBlock`](crate::CustomBlock) in sight was
+/// Where a document's [`CustomBlock`](crate::widgets::CustomBlock) in sight was
 /// drawn, from [`RichText::custom_blocks`], for the app to paint it.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[non_exhaustive]
@@ -564,8 +564,8 @@ impl RichText {
     /// is not a positive number. A document's text takes it throughout
     /// (headings, lists, tables, code); a paragraph the app gave its own
     /// [`Paragraph::with_line_height`] keeps that, and so do a document's
-    /// blocks inside a [`Block::Styled`](crate::Block::Styled) whose
-    /// [`BlockStyle::with_line_height`](crate::BlockStyle::with_line_height)
+    /// blocks inside a [`Block::Styled`](crate::widgets::Block::Styled) whose
+    /// [`BlockStyle::with_line_height`](crate::widgets::BlockStyle::with_line_height)
     /// sets one. Selections, carets,
     /// hit tests, and scrolling follow the taller lines; the gaps between
     /// blocks stay as they were. The place in the text, the selection,

@@ -374,7 +374,7 @@ pub enum TableResponse {
     /// The event is not the table's.
     Ignored,
     /// A right click on the header asks for its menu: show a
-    /// [`Menu`](crate::Menu) of the columns there (checked when shown,
+    /// [`Menu`](crate::widgets::Menu) of the columns there (checked when shown,
     /// toggled with [`Table::set_column_visible`]) or of the column's
     /// actions.
     HeaderMenu(HeaderMenu),
@@ -866,7 +866,7 @@ impl Table {
     }
 
     /// The count and prefix typed toward a motion, to show in a status bar
-    /// or a [`WhichKey`](crate::WhichKey) popup.
+    /// or a [`WhichKey`](crate::widgets::WhichKey) popup.
     pub fn keys(&self) -> &ListKeys {
         self.list.keys()
     }

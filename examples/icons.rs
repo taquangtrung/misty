@@ -26,11 +26,8 @@ use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use misty::{
-    AppContext, Application, Error, FocusId, Frame, GridSource, IconGrid, IconGridResponse, Image,
-    Input, Key, KeyCode, Mods, Point, Rect, Span, StyledText, Theme, ThemeToken, Thumbnails,
-    Widget, WindowId, WindowOptions, key_label,
-};
+use misty::{AppContext, Application, Error, FocusId, Frame, Image, Input, Key, KeyCode, Mods, Point, Rect, Span, StyledText, Theme, ThemeToken, Widget, WindowId, WindowOptions, key_label};
+use misty::widgets::{GridSource, IconGrid, IconGridResponse, Thumbnails};
 
 // ========================================================================
 // Constants

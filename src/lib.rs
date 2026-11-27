@@ -18,31 +18,31 @@
 //! [`WindowOptions::with_geometry`], and an app follows the user's light or
 //! dark, accent, and motion settings through [`AppContext::appearance`]
 //! and [`Input::AppearanceChanged`]. A frameless window draws its own title bar
-//! with a [`TitleBar`], a [`TabStrip`] shows the app's tabs, a
-//! [`SplitView`] its panes, and a [`StatusBar`] the app's state and
-//! passing messages. A [`List`] shows rows the app supplies, and a
-//! [`Table`] shows them in sortable, resizable columns and a [`TreeView`]
-//! as a tree whose children the app loads lazily; an [`IconGrid`] shows
-//! items as thumbnails a [`Thumbnails`] pool loads in the background. Their
-//! rows show plain text, or a [`RowContent`] with a [`RowIcon`], styled
-//! text, and [`Badge`]s; Shift+click, Shift with the arrows, and a rubber
+//! with a [`TitleBar`](widgets::TitleBar), a [`TabStrip`](widgets::TabStrip) shows the app's tabs, a
+//! [`SplitView`](widgets::SplitView) its panes, and a [`StatusBar`](widgets::StatusBar) the app's state and
+//! passing messages. A [`List`](widgets::List) shows rows the app supplies, and a
+//! [`Table`](widgets::Table) shows them in sortable, resizable columns and a [`TreeView`](widgets::TreeView)
+//! as a tree whose children the app loads lazily; an [`IconGrid`](widgets::IconGrid) shows
+//! items as thumbnails a [`Thumbnails`](widgets::Thumbnails) pool loads in the background. Their
+//! rows show plain text, or a [`RowContent`](widgets::RowContent) with a [`RowIcon`](widgets::RowIcon), styled
+//! text, and [`Badge`](widgets::Badge)s; Shift+click, Shift with the arrows, and a rubber
 //! band select ranges, and `row_rect`, `cell_rect`, and `item_rect` tell
-//! where a row was drawn, to place an inline rename field. A [`FlowList`]
-//! shows rows of different heights ([`FlowSource`]), scrolled by pixels,
-//! such as a reader's paragraphs. [`Hints`] puts Vimium-style letter
+//! where a row was drawn, to place an inline rename field. A [`FlowList`](widgets::FlowList)
+//! shows rows of different heights ([`FlowSource`](widgets::FlowSource)), scrolled by pixels,
+//! such as a reader's paragraphs. [`Hints`](widgets::Hints) puts Vimium-style letter
 //! labels over any targets, to pick one from the keyboard. A
-//! [`Menu`] pops up commands in a [`Popup`]; a [`TextField`] takes a line
-//! of text (a rename box, an address bar) and a [`TextArea`] several,
-//! wrapped to its width; a [`Select`] drops down a list
-//! of options to choose one; a [`QuickPick`] draws a session of the
-//! [`picker`] framework, its rows filtered as the user types; a [`Tooltip`] and [`Toasts`] show help and messages,
-//! a [`WhichKey`] popup the keys that may follow a pending prefix, a
-//! [`CompletionList`] the matches an editor offers as the user types, and
-//! an [`InfoCard`] what a word is, over it. A [`Transient`] offers
+//! [`Menu`](widgets::Menu) pops up commands in a [`Popup`](widgets::Popup); a [`TextField`](widgets::TextField) takes a line
+//! of text (a rename box, an address bar) and a [`TextArea`](widgets::TextArea) several,
+//! wrapped to its width; a [`Select`](widgets::Select) drops down a list
+//! of options to choose one; a [`QuickPick`](widgets::QuickPick) draws a session of the
+//! [`picker`] framework, its rows filtered as the user types; a [`Tooltip`](widgets::Tooltip) and [`Toasts`](widgets::Toasts) show help and messages,
+//! a [`WhichKey`](widgets::WhichKey) popup the keys that may follow a pending prefix, a
+//! [`CompletionList`](widgets::CompletionList) the matches an editor offers as the user types, and
+//! an [`InfoCard`](widgets::InfoCard) what a word is, over it. A [`Transient`](widgets::Transient) offers
 //! commands with the switches that change them, as magit does, and a
-//! [`DropList`] drops a list such as an outline over a view's cells.
-//! A [`ScrollView`] scrolls content larger than its area behind thin
-//! scrollbars, and a [`ProgressBar`] shows how far a long task has come.
+//! [`DropList`](widgets::DropList) drops a list such as an outline over a view's cells.
+//! A [`ScrollView`](widgets::ScrollView) scrolls content larger than its area behind thin
+//! scrollbars, and a [`ProgressBar`](widgets::ProgressBar) shows how far a long task has come.
 //! Text is drawn in styled runs measured in cells with
 //! [`Frame::draw_text`], prose in the proportional font as wrapped rich
 //! [`Paragraph`]s with [`Frame::draw_paragraph`], and pictures with [`Frame::draw_image`] and
@@ -55,7 +55,7 @@
 //! the same way on worker threads. An app with a renderer of its own (Vello, a video decoder, a 3D
 //! view) renders into a [`GpuTexture`] on misty's [`Gpu`], from [`AppContext::gpu`], and
 //! draws it with [`Frame::draw_texture`]; misty re-exports the [`wgpu`] it is built on.
-//! A [`RichText`] shows paragraphs as a read-only, scrolling,
+//! A [`RichText`](widgets::RichText) shows paragraphs as a read-only, scrolling,
 //! selectable document with links and find.
 //! Charts, diagrams, and graph edges are [`VectorPath`]s, built with a
 //! [`VectorPathBuilder`] or a shape helper and drawn antialiased with
@@ -92,21 +92,21 @@
 //! AccessKit (see [`AccessAction`]): widgets add themselves while drawing,
 //! and a reader's clicks and focus requests come back as [`AccessAction`]s.
 //!
-//! A [`Button`] runs an action or, as a toggle, stays pressed in; a
-//! [`Toolbar`] sets buttons in a row (bound to commands, in toggle groups,
-//! the ones that do not fit in a menu); and a [`Breadcrumb`] shows where
+//! A [`Button`](widgets::Button) runs an action or, as a toggle, stays pressed in; a
+//! [`Toolbar`](widgets::Toolbar) sets buttons in a row (bound to commands, in toggle groups,
+//! the ones that do not fit in a menu); and a [`Breadcrumb`](widgets::Breadcrumb) shows where
 //! the user is as crumbs to click, or as an address to type. Menus hold
 //! checked and radio items and nested submenus.
-//! A [`Checkbox`] turns an option on or off, drawn as a box or a switch,
-//! and a [`RadioGroup`] picks one of a few options.
-//! A [`Dialog`] asks a question with buttons, laid out by the [`layout`]
-//! engine. A [`Slider`] picks a number along a track and a [`Stepper`]
-//! steps one with minus and plus buttons, both inside a [`NumberRange`].
+//! A [`Checkbox`](widgets::Checkbox) turns an option on or off, drawn as a box or a switch,
+//! and a [`RadioGroup`](widgets::RadioGroup) picks one of a few options.
+//! A [`Dialog`](widgets::Dialog) asks a question with buttons, laid out by the [`layout`]
+//! engine. A [`Slider`](widgets::Slider) picks a number along a track and a [`Stepper`](widgets::Stepper)
+//! steps one with minus and plus buttons, both inside a [`NumberRange`](widgets::NumberRange).
 //! [`view::settings_page`] lays out an app's settings and keybindings on the
 //! page kit, every control reachable from the keyboard. A [`SystemClipboard`] carries text to and from other apps.
 //!
-//! Every command lives in one [`CommandRegistry`], which feeds the keymap,
-//! the menus, the [`command_palette`], and the keybinding editor. What the
+//! Every command lives in one [`CommandRegistry`](widgets::CommandRegistry), which feeds the keymap,
+//! the menus, the [`command_palette`](widgets::command_palette), and the keybinding editor. What the
 //! user does reaches the app and its widgets as misty [`Input`]s, read once
 //! from the window system by the runtime: pointer moves, presses, and wheel
 //! turns with the pointer's position and the modifiers held, and keys as
@@ -151,11 +151,11 @@ mod runtime;
 pub mod testing;
 
 /// The monospace cell grid, for an app that draws text in a terminal's
-/// way: a [`CellBuffer`] of [`Cell`]s in
-/// [`CellStyle`]s, the 256-color ANSI
-/// [`Palette`] their [`CellColor`]s index,
-/// widths measured in cells ([`text_width`]), and the
-/// [`GridScroll`] that scrolls a grid of lines. Text
+/// way: a [`CellBuffer`](grid::CellBuffer) of [`Cell`](grid::Cell)s in
+/// [`CellStyle`](grid::CellStyle)s, the 256-color ANSI
+/// [`Palette`](grid::Palette) their [`CellColor`](grid::CellColor)s index,
+/// widths measured in cells ([`text_width`](grid::text_width)), and the
+/// [`GridScroll`](grid::GridScroll) that scrolls a grid of lines. Text
 /// elsewhere is proportional and needs none of it.
 pub mod grid {
     pub use super::base::cell::{
@@ -169,14 +169,6 @@ pub mod grid {
     pub use super::widgets::{GridLayout, GridLine, GridScroll};
 }
 
-// The grid's types at the root as well, as apps named them before `grid`;
-// hidden from the docs, which show them there.
-#[doc(hidden)]
-pub use grid::{
-    ANSI_COLORS, Attributes, Cell, CellBuffer, CellColor, CellHighlight, CellSource, CellStyle,
-    CellWidth, Cursor, CursorShape, PALETTE_SIZE, Palette, UnderlineStyle, char_width, fit_text,
-    text_width, truncate_text,
-};
 pub mod view;
 pub mod widgets;
 
@@ -269,49 +261,3 @@ pub use view::embed::{HostedView, ScrollStep, ViewHost};
 pub use view::settings::{Setting, SettingValue, SettingsSection};
 pub use wgpu;
 pub use widgets::picker;
-// The widgets at the root as well, as apps named them before `widgets`;
-// hidden from the docs, which show them there.
-#[cfg(feature = "highlight")]
-#[doc(hidden)]
-pub use widgets::Highlighter;
-#[doc(hidden)]
-pub use widgets::{
-    Badge, Block, BlockImage, BlockStyle, Breadcrumb, BreadcrumbProps, BreadcrumbResponse, Button,
-    ButtonProps, ButtonResponse, ButtonVariant, ByteSource, CellBorder, CellBorders, CellRange,
-    Checkbox, CheckboxProps, CheckboxResponse, CodeView, CodeViewResponse, ColorField,
-    ColorFieldProps, ColorFieldResponse, Command, CommandError, CommandKeys, CommandRegistry,
-    CompletionList, CompletionListResponse, CompletionRow, ConflictKind, Container, ContextPress,
-    Corner, Crumb, CustomBlock, CustomHeight, DataLink, Dialog, DialogButton, DialogResponse,
-    Document, Drag, DragResponse, DropList, DropListResponse, DropRow, Dropped, FileDrop,
-    FileDropEvent, FileDropped, FileHover, FloatingPanel, FloatingPanelResponse, FlowList,
-    FlowListResponse, FlowSource, GridData, GridLayout, GridLine, GridScroll, GridSource,
-    GutterMark, HeaderMenu, Heading, HeightForWidth, HexView, HexViewResponse, Highlight,
-    HighlightedCode, Hints, HintsError, HintsResponse, IconGrid, IconGridResponse, ImageView,
-    InfoCard, Inline, InvalidKeys, KeyCapture, KeyCaptureProps, KeyCaptureResponse, KeyConflict,
-    KeyEdit, KeyScope, Link, List, ListBlock, ListKeys, ListResponse, ListSource, Mark, MarkStyle,
-    Menu, MenuEntry, MenuItem, MenuResponse, MenuSlot, NamesField, NamesFieldProps,
-    NamesFieldResponse, NumberProps, NumberRange, PageSize, Paged, PlacedBlock, Popup, PopupSide,
-    ProgressBar, ProgressProps, QueryStyle, QuickPick, QuickPickPlacement, QuickPickTick,
-    RadioGroup, RadioGroupProps, RadioGroupResponse, RichText, RichTextPos, RichTextResponse,
-    RowContent, RowDrop, RowIcon, RowPointer, RowPointerKind, ScrollAlign, ScrollAmount,
-    ScrollView, ScrollViewResponse, Select, SelectProps, SelectResponse, SeverityMark, Slider,
-    SliderResponse, SortDirection, SortKey, Stepper, StepperResponse, SwitchKind, Table,
-    TableBlock, TableCellStyle, TableCells, TableColumn, TableResponse, TableRow, TableSource,
-    TextArea, TextAreaProps, TextAreaResponse, TextField, TextFieldProps, TextFieldResponse,
-    Thumbnail, Thumbnails, TileKey, TileSet, Toasts, ToastsResponse, ToolButton, Toolbar,
-    ToolbarItem, ToolbarResponse, Tooltip, TooltipPlacement, Transient, TransientCommand,
-    TransientResponse, TransientRow, TransientSwitch, TreeDrop, TreeItem, TreeItems, TreeView,
-    TreeViewResponse, Viewport, ViewportResponse, WhichKey, WhichKeyEntry, WhichKeyPlacement,
-    WhichKeyResponse, command_palette, draw_backdrop, draw_drop_target, draw_keycap, draw_label,
-    draw_popup_header, draw_styled_label, fit_label, label_width, styled_label_width,
-};
-#[cfg(feature = "html")]
-#[doc(hidden)]
-pub use widgets::{ClassStyle, HtmlOptions, ImageSource};
-#[doc(hidden)]
-pub use widgets::{
-    DropZone, ModeBadge, SplitView, SplitViewResponse, StatusBar, StatusBarResponse, StatusLine,
-    StatusPrompt, StatusSegment, TabClose, TabDrag, TabId, TabStrip, TabStripHit, TabStripResponse,
-    TabStyle, TabWidth, TitleAlign, TitleBar, TitleBarButton, TitleBarHit, TitleBarResponse,
-    WindowButton, WindowButtons,
-};

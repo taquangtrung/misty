@@ -15,10 +15,8 @@
 
 use std::time::Instant;
 
-use misty::{
-    AppContext, Application, CodeView, Error, Frame, GutterMark, HexView, Input, Key, KeyCode,
-    Mods, Rect, Rgba, Theme, ThemeToken, Widget, WindowId, WindowOptions,
-};
+use misty::{AppContext, Application, Error, Frame, Input, Key, KeyCode, Mods, Rect, Rgba, Theme, ThemeToken, Widget, WindowId, WindowOptions};
+use misty::widgets::{CodeView, GutterMark, HexView};
 
 // ========================================================================
 // Constants
@@ -75,7 +73,7 @@ impl Demo {
     fn new() -> Self {
         let mut code = CodeView::new(SOURCE);
         #[cfg(feature = "highlight")]
-        code.set_highlights(misty::Highlighter::new().highlight(SOURCE, LANGUAGE));
+        code.set_highlights(misty::widgets::Highlighter::new().highlight(SOURCE, LANGUAGE));
         code.set_marks([(0, FIRST_LINE_MARK)]);
         code.set_focused(true);
         Self {

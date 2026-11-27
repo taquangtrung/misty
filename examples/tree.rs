@@ -26,10 +26,8 @@ use std::thread;
 use std::time::Duration;
 
 use misty::view::{column, text, tree_view};
-use misty::{
-    App, AppCx, Element, Key, KeyCode, KeyScheme, ListKeys, Mods, Theme, ThemeToken, TreeItem,
-    TreeItems, Update, Waker, WindowId, WindowOptions, key_label,
-};
+use misty::{App, AppCx, Element, Key, KeyCode, KeyScheme, Mods, Theme, ThemeToken, Update, Waker, WindowId, WindowOptions, key_label};
+use misty::widgets::{ListKeys, TreeItem, TreeItems};
 
 // ========================================================================
 // Constants

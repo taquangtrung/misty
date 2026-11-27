@@ -73,7 +73,7 @@ pub enum SliderResponse {
     Ignored,
 }
 
-/// What the app's state says a [`Slider`] or a [`Stepper`](crate::Stepper)
+/// What the app's state says a [`Slider`] or a [`Stepper`](crate::widgets::Stepper)
 /// shows, for [`Control::sync`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct NumberProps<'a> {

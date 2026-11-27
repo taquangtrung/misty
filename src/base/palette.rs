@@ -5,7 +5,7 @@
 //! [`Theme::background_of`](crate::Theme::background_of) resolve a cell's
 //! colors against.
 //!
-//! [`CellColor::Indexed`]: crate::CellColor::Indexed
+//! [`CellColor::Indexed`]: crate::grid::CellColor::Indexed
 
 use super::color::Rgb;
 
@@ -17,7 +17,7 @@ use super::color::Rgb;
 pub const ANSI_COLORS: usize = 16;
 
 /// The number of entries in the palette a
-/// [`CellColor::Indexed`](crate::CellColor::Indexed) picks from.
+/// [`CellColor::Indexed`](crate::grid::CellColor::Indexed) picks from.
 pub const PALETTE_SIZE: usize = 256;
 
 /// The first palette index of the grey ramp, just past the color cube.
@@ -40,7 +40,7 @@ const GREY_STEP: u8 = 10;
 // ========================================================================
 
 /// The indexed colors cell content is drawn in: what a
-/// [`CellColor::Indexed`](crate::CellColor::Indexed) in a cell grid or a
+/// [`CellColor::Indexed`](crate::grid::CellColor::Indexed) in a cell grid or a
 /// [`TextColor::Palette`](crate::TextColor::Palette) color names.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Palette {

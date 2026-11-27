@@ -751,7 +751,7 @@ impl<'a, A, S: ?Sized> Table<'a, A, S> {
 
     /// This table keeping its first `rows` rows and `columns` columns in
     /// place while the others scroll under them, as
-    /// [`Table::with_frozen`](crate::Table::with_frozen) says; none
+    /// [`Table::with_frozen`](crate::widgets::Table::with_frozen) says; none
     /// without it.
     pub fn frozen(self, rows: usize, columns: usize) -> Self {
         Self {
@@ -762,13 +762,13 @@ impl<'a, A, S: ?Sized> Table<'a, A, S> {
 
     /// This table drawing its cells (their text, the rows' height, and the
     /// columns' widths) `zoom` times their size, as
-    /// [`Table::set_zoom`](crate::Table::set_zoom) says; 1 without it.
+    /// [`Table::set_zoom`](crate::widgets::Table::set_zoom) says; 1 without it.
     pub fn zoom(self, zoom: f32) -> Self {
         Self { zoom, ..self }
     }
 
     /// This table with a cell cursor on `column` of the cursor's row, as
-    /// [`Table::set_cell_cursor`](crate::Table::set_cell_cursor) draws and
+    /// [`Table::set_cell_cursor`](crate::widgets::Table::set_cell_cursor) draws and
     /// moves it; none without it.
     pub fn cell_cursor(self, column: usize) -> Self {
         Self {
@@ -1842,7 +1842,7 @@ impl<K: Clone + Eq + Hash + Send + 'static> GridSource for NoItems<K> {
 // ========================================================================
 
 /// A list of the app's `rows`, its cursor on row `cursor`, as the
-/// [`List`](crate::List) widget draws it: only the rows in sight are asked
+/// [`List`](crate::widgets::List) widget draws it: only the rows in sight are asked
 /// for, so a list of a million rows costs what one of twenty does. Its
 /// keys are the Vim list keys the widget documents (`j`, `k`, `C-f`, `g g`,
 /// `5j`, Space to select, Enter to activate); the pointer clicks, drags
@@ -1853,7 +1853,8 @@ impl<K: Clone + Eq + Hash + Send + 'static> GridSource for NoItems<K> {
 /// use std::collections::BTreeSet;
 ///
 /// use misty::view::{column, list, text};
-/// use misty::{App, Element, ListSource, Theme, WindowId};
+/// use misty::{App, Element, Theme, WindowId};
+/// use misty::widgets::ListSource;
 ///
 /// struct Rows(Vec<String>);
 ///
@@ -1908,7 +1909,7 @@ pub fn list<'a, A, S: ListSource + ?Sized>(rows: &'a S, cursor: usize) -> List<'
 }
 
 /// A table of the app's `rows` in `columns`, under a header naming each,
-/// its cursor on row `cursor`, as the [`Table`](crate::Table) widget draws
+/// its cursor on row `cursor`, as the [`Table`](crate::widgets::Table) widget draws
 /// it. Its rows take a list's keys and pointer; dragging a border between
 /// titles resizes a column, a click on a title asks to sort by it
 /// ([`Table::on_sort`]), and columns wider than the table scroll sideways.
@@ -1940,7 +1941,7 @@ pub fn table<'a, A, S: TableSource + ?Sized>(
 
 /// A tree of the app's `items`, its cursor on the item `cursor` (`None`
 /// leaves it where it is, on the first row at first), as the
-/// [`TreeView`](crate::TreeView) widget draws it. Right (`l`) expands a
+/// [`TreeView`](crate::widgets::TreeView) widget draws it. Right (`l`) expands a
 /// node, Left (`h`) collapses it, and the rest are a list's keys; a click
 /// on a node's arrow expands or collapses it. A node whose children the
 /// items lack asks for them through [`Tree::on_load`]. The items are copied
@@ -1963,7 +1964,7 @@ pub fn tree_view<'a, A, K>(items: &'a TreeItems<K>, cursor: Option<&'a K>) -> Tr
 
 /// A grid of the app's `items` as thumbnails with labels, as many columns
 /// as the width holds, its cursor on item `cursor`, as the
-/// [`IconGrid`](crate::IconGrid) widget draws it. The thumbnails load in
+/// [`IconGrid`](crate::widgets::IconGrid) widget draws it. The thumbnails load in
 /// the cache `thumbnails` makes, called once, the first time the element
 /// is built (it takes the [`Waker`](crate::Waker) the app was started
 /// with); misty takes in what its workers loaded. The arrows move over the

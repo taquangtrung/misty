@@ -18,7 +18,8 @@
 //!
 //! ```
 //! use misty::testing::TestWindow;
-//! use misty::{ButtonInput, Input, Point, PointerButton, TextField, Widget};
+//! use misty::{ButtonInput, Input, Point, PointerButton, Widget};
+//! use misty::widgets::TextField;
 //!
 //! let mut window = TestWindow::new(320, 80);
 //! let mut field = TextField::new();

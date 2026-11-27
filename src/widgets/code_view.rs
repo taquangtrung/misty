@@ -12,7 +12,7 @@
 //! [`CodeView::set_highlights`]: byte ranges of the text, each with a
 //! highlight name resolved through the theme's
 //! [`syntax`](crate::Theme::syntax) colors, so any highlighter works
-//! (tree-sitter in the app, or [`Highlighter`](crate::Highlighter) behind
+//! (tree-sitter in the app, or [`Highlighter`](crate::widgets::Highlighter) behind
 //! the `highlight` feature). Tabs are drawn to the next multiple of four
 //! cells.
 //!

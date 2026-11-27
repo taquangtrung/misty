@@ -6,7 +6,7 @@
 //!
 //! Keys, through the lent [`Widget::handle`](crate::Widget::handle), are the ones every list-like
 //! widget shares, read across a grid as Vim reads lines (see
-//! [`List`](crate::List) for the whole set): Up and Down (`k`, `j`,
+//! [`List`](crate::widgets::List) for the whole set): Up and Down (`k`, `j`,
 //! `C-p`, `C-n`) and the paging, scrolling, screen (`H`, `M`, `L`), and
 //! `z` keys move over rows keeping the cursor's column; Left and Right
 //! (`h`, `l`) move a cell within the row, stopping at its ends as Vim's
@@ -30,7 +30,7 @@
 //! items were drawn, to place hint labels or a rename field.
 //!
 //! The rows glide to a new scroll rather than jump, as a
-//! [`List`](crate::List)'s do; call the lent grid's
+//! [`List`](crate::widgets::List)'s do; call the lent grid's
 //! [`Widget::about_to_wait`] so each step is drawn. While motion is
 //! reduced ([`Frame::reduced_motion`]) they jump.
 
@@ -360,7 +360,7 @@ impl IconGrid {
     // --------------------------------------------------------------------
 
     /// The count and prefix typed toward a motion, to show in a status bar
-    /// or a [`WhichKey`](crate::WhichKey) popup.
+    /// or a [`WhichKey`](crate::widgets::WhichKey) popup.
     pub fn keys(&self) -> &ListKeys {
         &self.keys
     }

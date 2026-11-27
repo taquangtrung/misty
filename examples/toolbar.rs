@@ -19,13 +19,8 @@
 
 use std::time::Instant;
 
-use misty::{
-    AccessAction, AppContext, Application, Breadcrumb, BreadcrumbResponse, Button, ButtonResponse,
-    Command, CommandRegistry, Control, Crumb, Error, EventCx, FocusId, FocusTree, Frame, IconSet,
-    ImeFocus, Input, Key, KeyCode, Menu, MenuEntry, MenuItem, MenuResponse, Mods, Outcome, Point,
-    PopupSide, Rect, Route, Size, Span, StyledText, Theme, ThemeToken, ToolButton, Toolbar,
-    ToolbarItem, ToolbarResponse, Tooltip, Widget, WindowId, WindowOptions,
-};
+use misty::{AccessAction, AppContext, Application, Control, Error, EventCx, FocusId, FocusTree, Frame, IconSet, ImeFocus, Input, Key, KeyCode, Mods, Outcome, Point, Rect, Route, Size, Span, StyledText, Theme, ThemeToken, Widget, WindowId, WindowOptions};
+use misty::widgets::{Breadcrumb, BreadcrumbResponse, Button, ButtonResponse, Command, CommandRegistry, Crumb, Menu, MenuEntry, MenuItem, MenuResponse, PopupSide, ToolButton, Toolbar, ToolbarItem, ToolbarResponse, Tooltip};
 
 // ========================================================================
 // Constants

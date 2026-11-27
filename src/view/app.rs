@@ -154,7 +154,7 @@ pub trait App: Sized + 'static {
     /// threads (a folder read, a timer's tick) and wakes the event loop.
     /// Keep it, or clones of it, for the work that needs it; a
     /// [`Picker`](crate::picker::Picker) or a
-    /// [`Thumbnails`](crate::Thumbnails) cache takes one too. The default
+    /// [`Thumbnails`](crate::widgets::Thumbnails) cache takes one too. The default
     /// drops it.
     fn start(&mut self, _waker: Waker<Update<Self>>) {}
 
@@ -325,7 +325,7 @@ impl<'a> AppCx<'a> {
     /// target as a screen reader would, and gives a text field (or a
     /// target no widget took the click for) the keyboard; Esc, a press, or a
     /// wheel turn takes the labels away. While they show they take every
-    /// key, as [`Hints`](crate::Hints) does. A callback asks through a
+    /// key, as [`Hints`](crate::widgets::Hints) does. A callback asks through a
     /// field that [`App::about_to_wait`] reads and passes here.
     pub fn show_hints(&mut self) {
         self.hints = true;

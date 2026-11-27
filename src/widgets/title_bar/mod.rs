@@ -31,7 +31,7 @@
 //! [`TitleBarResponse::AppButton`] with its index; screen readers click
 //! it too, and the hover's help comes from [`TitleBar::tooltip_hover`].
 //!
-//! [`Menu`]: crate::Menu
+//! [`Menu`]: crate::widgets::Menu
 //!
 //! The app owns a `TitleBar`, offers it each window event first with
 //! [`TitleBar::handle`](crate::Widget::handle), and draws it each frame with
@@ -410,7 +410,7 @@ impl TitleBar {
 
     /// Where the app's button under the pointer was drawn and its tooltip,
     /// while the pointer is over one that has a tooltip, for the app's
-    /// [`Tooltip`](crate::Tooltip) to show.
+    /// [`Tooltip`](crate::widgets::Tooltip) to show.
     pub fn tooltip_hover(&self) -> Option<(Rect, String)> {
         let Some(TitleBarHit::AppButton(index)) = self.hovered else {
             return None;
@@ -1435,7 +1435,7 @@ mod tests {
         let strip_bar = bar
             .tabs()
             .and_then(|tabs| tabs.hit_test(Point::new(20.0, 16.0)));
-        assert_eq!(strip_bar, Some(crate::TabStripHit::Tab(first)));
+        assert_eq!(strip_bar, Some(crate::widgets::TabStripHit::Tab(first)));
         let send = |window: &mut TestWindow, input: Input, bar: &mut TitleBar| {
             window.send(&input, |input, cx| bar.handle(input, cx))
         };

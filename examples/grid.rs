@@ -14,11 +14,8 @@ use std::thread;
 use std::time::Duration;
 
 use misty::view::{cells, column};
-use misty::{
-    ANSI_COLORS, App, AppCx, Attributes, Cell, CellBuffer, CellColor, CellStyle, CellWidth, Cursor,
-    CursorShape, Element, Key, KeyCode, Mods, Theme, UnderlineStyle, Update, Waker, WindowId,
-    WindowOptions,
-};
+use misty::{App, AppCx, Element, Key, KeyCode, Mods, Theme, Update, Waker, WindowId, WindowOptions};
+use misty::grid::{ANSI_COLORS, Attributes, Cell, CellBuffer, CellColor, CellStyle, CellWidth, Cursor, CursorShape, UnderlineStyle};
 
 // ========================================================================
 // Constants
@@ -298,7 +295,7 @@ fn main() -> Result<(), misty::Error> {
 
 #[cfg(all(test, feature = "testing"))]
 mod tests {
-    use misty::CellSource;
+    use misty::grid::CellSource;
     use misty::testing::TreeWindow;
 
     use super::*;

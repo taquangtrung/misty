@@ -138,7 +138,7 @@ impl Hints {
     }
 
     /// Shows a label over each of `targets` (rectangles in physical pixels,
-    /// such as [`List::row_rect`](crate::List::row_rect) gives), forgetting
+    /// such as [`List::row_rect`](crate::widgets::List::row_rect) gives), forgetting
     /// what was typed. No targets shows nothing.
     pub fn show(&mut self, targets: Vec<Rect>) {
         self.labels = labels(targets.len(), &self.alphabet);

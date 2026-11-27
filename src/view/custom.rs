@@ -183,7 +183,7 @@ impl<'a, A, W: Widget + 'static> Custom<'a, A, W> {
     /// has the keyboard, as misty's text fields do: `caret` says where the
     /// widget's text caret was drawn in the window, in physical pixels (a
     /// rectangle as tall as its line, as
-    /// [`TextField::cursor_area`](crate::TextField::cursor_area) gives), or
+    /// [`TextField::cursor_area`](crate::widgets::TextField::cursor_area) gives), or
     /// `None` while it takes no text (a Vim Normal mode). While it gives
     /// one, the input method is enabled with its candidate window beside
     /// the caret, and the widget gets the composition as
@@ -613,7 +613,7 @@ pub fn custom<'a, A, W: Widget + 'static>(create: impl Fn() -> W + 'a) -> Custom
 /// [`Element::on_scroll`], each with points from its top left.
 ///
 /// The frame draws text three ways: [`Frame::draw_plain_text`] and
-/// [`Frame::draw_text`] on the cell grid, [`draw_label`](crate::draw_label)
+/// [`Frame::draw_text`] on the cell grid, [`draw_label`](crate::widgets::draw_label)
 /// in the theme's label font, and [`Frame::draw_paragraph`] in the
 /// proportional (UI) font whatever the theme. A label at a point, such as
 /// a graph node's name, is a [`Paragraph`](crate::Paragraph) drawn in a

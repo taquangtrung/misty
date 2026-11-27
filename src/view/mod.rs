@@ -6,7 +6,8 @@
 //!
 //! ```
 //! use misty::view::{checkbox, column, field, form, slider, text};
-//! use misty::{App, Element, NumberRange, Theme, WindowId};
+//! use misty::{App, Element, Theme, WindowId};
+//! use misty::widgets::NumberRange;
 //!
 //! const VOLUME: NumberRange = NumberRange::new(0.0, 100.0, 5.0);
 //!

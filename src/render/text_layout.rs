@@ -1,5 +1,5 @@
 //! Lays a line of styled text out on the cell grid: each character starts
-//! at the column its predecessors' [`width`](crate::text_width)s add
+//! at the column its predecessors' [`width`](crate::grid::text_width)s add
 //! up to, so a wide character takes exactly two cells whatever advance the
 //! font that draws it has, and text lines up with a grid drawn from the
 //! same string.

@@ -682,8 +682,8 @@ impl<'a, A> Element<'a, A> {
     /// it marks: `marker` gets where the target was drawn and the pointer
     /// from its top left, and returns the rectangle to mark, as a pane
     /// marks the side a tab dropped there would split it on
-    /// ([`DropZone::at`](crate::DropZone::at) and
-    /// [`DropZone::rect`](crate::DropZone::rect)). Without one the whole
+    /// ([`DropZone::at`](crate::widgets::DropZone::at) and
+    /// [`DropZone::rect`](crate::widgets::DropZone::rect)). Without one the whole
     /// target is marked; on an element that is no drop target it does
     /// nothing.
     pub fn drop_marker(mut self, marker: impl Fn(Rect, Point) -> Rect + 'static) -> Self {

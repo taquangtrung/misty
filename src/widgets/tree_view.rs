@@ -499,7 +499,7 @@ impl<K: Clone + Eq + Hash> TreeView<K> {
     }
 
     /// The count and prefix typed toward a motion, to show in a status bar
-    /// or a [`WhichKey`](crate::WhichKey) popup.
+    /// or a [`WhichKey`](crate::widgets::WhichKey) popup.
     pub fn keys(&self) -> &ListKeys {
         self.list.keys()
     }
