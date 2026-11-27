@@ -342,6 +342,16 @@ pub enum TabStripResponse {
     NewTab,
 }
 
+/// Which end of a tab shown in part fades out: the one toward the tabs out
+/// of sight.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum FadeSide {
+    /// The start, of a tab scrolled off the strip's left.
+    Left,
+    /// The end, of a tab running off the strip's right.
+    Right,
+}
+
 // ========================================================================
 // TabStrip Implementations
 // ========================================================================
@@ -916,7 +926,9 @@ impl TabStrip {
             frame.draw_box(dot, &style);
             return;
         }
+        // Part of a tab is there to be gone to, not closed.
         let shown = tab.closable
+            && !slot.peek
             && match self.options.close {
                 TabClose::ActiveOrHovered => is_active || is_hovered,
                 TabClose::Hovered => is_hovered,
@@ -1582,7 +1594,11 @@ impl Widget for TabStrip {
             match slot.peek {
                 true => frame.clipped(slot.body, |frame| {
                     self.draw_tab(frame, theme, slot, &layout);
-                    draw_fade(frame, slot.body, theme.surface);
+                    let side = match slot.index < layout.first {
+                        true => FadeSide::Left,
+                        false => FadeSide::Right,
+                    };
+                    draw_fade(frame, slot.body, theme.surface, side);
                 }),
                 false => self.draw_tab(frame, theme, slot, &layout),
             }
@@ -1668,15 +1684,23 @@ fn index_for_gap(from: usize, gap: usize) -> usize {
     }
 }
 
-/// Fades the right end of `body`, a tab shown in part, into `color`, the
+/// Fades the `side` end of `body`, a tab shown in part, into `color`, the
 /// strip's own, so its cut edge reads as the tab going on out of sight
 /// rather than as a narrow tab.
-fn draw_fade(frame: &mut Frame, body: Rect, color: Rgb) {
+fn draw_fade(frame: &mut Frame, body: Rect, color: Rgb, side: FadeSide) {
     let width = (FADE_CELLS * frame.cell_metrics().width).min(body.width);
     let step = width / FADE_STEPS as f32;
     for at in 0..FADE_STEPS {
-        let share = (at + 1) as f32 / FADE_STEPS as f32;
-        let x = body.x + body.width - width + at as f32 * step;
+        let (share, x) = match side {
+            FadeSide::Left => (
+                (FADE_STEPS - at) as f32 / FADE_STEPS as f32,
+                body.x + at as f32 * step,
+            ),
+            FadeSide::Right => (
+                (at + 1) as f32 / FADE_STEPS as f32,
+                body.x + body.width - width + at as f32 * step,
+            ),
+        };
         let alpha = (share * 255.0).round() as u8;
         let fill = Rgba::new(color.r, color.g, color.b, alpha);
         frame.fill_rect(Rect::new(x, body.y, step.ceil(), body.height), fill);
@@ -2146,7 +2170,10 @@ mod tests {
             return;
         };
         let close = strip.layout.as_ref().expect("drawn").slots[0].close;
-        let (x, y) = (close.x + close.width / 2.0 + 2.0, close.y + close.height / 2.0);
+        let (x, y) = (
+            close.x + close.width / 2.0 + 2.0,
+            close.y + close.height / 2.0,
+        );
         dotted.assert_pixel(x, y, theme.accent, "the accent dot");
         assert!(!strip.set_attention(TabId(99), true), "no such tab");
     }

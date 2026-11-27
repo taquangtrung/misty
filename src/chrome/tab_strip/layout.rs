@@ -45,7 +45,8 @@ const ROUNDING_SLACK: f32 = 0.5;
 const BOTH_STEP_BUTTONS: usize = 2;
 
 /// How much of the narrowest tab shows at the left end of an overflowing strip
-/// when earlier tabs are hidden, so the icon and start of the title remain legible.
+/// when earlier tabs are hidden: its end, as a strip scrolled past its start
+/// shows it, enough of the title to say what it is.
 const LEFT_PEEK_SHARE: f32 = 0.8;
 
 /// How much of the narrowest tab shows at the right end of an overflowing strip
@@ -276,11 +277,11 @@ impl TabStripLayout {
         let room = viewport - before - after + ROUNDING_SLACK;
         let mut slots = Vec::new();
         if before > 0.0 {
-            // Its start shows, the icon and the title's first letters, which
-            // say what it is; its end is mostly blank room for the close
-            // button.
+            // Its end shows, running on to the first tab shown whole, as a
+            // strip scrolled past its start would show it; the rest lies off
+            // the strip's left.
             let index = first - 1;
-            let x = tabs_x.round();
+            let x = (tabs_x + before - widths[index]).round();
             let shown = Rect::new(tabs_x, bar.y, before, bar.height);
             slots.push(sizes.peek(
                 index,
@@ -520,15 +521,7 @@ impl TabSizes {
     /// The slot of the tab at `index`, laid out whole `width` wide from
     /// `x`, `y`, with `marks` beside its title, of which only `shown`
     /// shows.
-    fn peek(
-        &self,
-        index: usize,
-        x: f32,
-        y: f32,
-        width: f32,
-        marks: Marks,
-        shown: Rect,
-    ) -> TabSlot {
+    fn peek(&self, index: usize, x: f32, y: f32, width: f32, marks: Marks, shown: Rect) -> TabSlot {
         TabSlot {
             body: shown,
             peek: true,
@@ -951,13 +944,21 @@ mod tests {
     }
 
     #[test]
-    fn test_part_of_a_tab_shows_its_start_and_is_gone_to_not_closed() {
+    fn test_part_of_a_tab_shows_the_end_nearer_the_strip_and_is_gone_to_not_closed() {
         let tabs = tabs(&[10; 5]);
         let layout = layout(396.0, &tabs, 1, None);
         let before = &layout.slots[0];
         assert!(before.peek);
-        // The whole tab starts where its part does, so its title shows.
-        assert_eq!(before.title_origin.x, before.body.x + 10.0);
+        // Scrolled past its start: the tab runs off the strip's left, and
+        // its end meets the first tab shown whole, as a scrolled row does.
+        assert!(before.title_origin.x < before.body.x, "its start is off");
+        assert!(
+            before.close.x >= before.body.x
+                && before.close.x + before.close.width <= before.body.x + before.body.width,
+            "its end shows, the close button's place in it"
+        );
+        let end = Point::new(before.close.x + before.close.width / 2.0, 16.0);
+        assert_eq!(layout.hit(end, &tabs), Some(TabStripHit::Tab(TabId(0))));
         let after = layout.slots.last().expect("the part after");
         let corner = Point::new(after.body.x + after.body.width - 2.0, 16.0);
         assert!(
@@ -1061,7 +1062,10 @@ mod tests {
         assert_eq!(icon.body.width, plain.body.width + 20.0, "two cells more");
         assert_eq!(busy.body.width, icon.body.width, "the icon stays");
         assert!(busy.lead.is_some());
-        assert_eq!(busy.mark, busy.close, "the spinner in the close button's place");
+        assert_eq!(
+            busy.mark, busy.close,
+            "the spinner in the close button's place"
+        );
         let lead = icon.lead.expect("an icon square");
         // The 15 pixel icon (0.75 of 20) sits after the padding, centered.
         assert_eq!(lead, Rect::new(icon.body.x + 10.0, 9.0, 15.0, 15.0));
