@@ -43,6 +43,10 @@ pub enum Extent {
     Cells(f32),
     /// This share (0 to 1) of its container.
     Fraction(f32),
+    /// One physical pixel, whatever the display's scale, its fill drawn on
+    /// whole pixels: the thickness of a rule between parts, crisp where a
+    /// logical pixel would blur across two.
+    Hairline,
     /// This many logical pixels, scaled by the display's scale factor, for
     /// what is drawn rather than written.
     Px(f32),
@@ -295,6 +299,7 @@ impl Extent {
             Self::Auto => Length::Auto,
             Self::Cells(cells) => Length::Fixed(cells * cell_size(across, metrics)),
             Self::Fraction(share) => Length::Percent(share),
+            Self::Hairline => Length::Fixed(1.0),
             Self::Px(pixels) => Length::Fixed(pixels * scale as f32),
         }
     }

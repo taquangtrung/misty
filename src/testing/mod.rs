@@ -302,6 +302,21 @@ impl TestWindow {
         })
     }
 
+    /// What [`TestWindow::render`] draws, with the frame at
+    /// `scale_factor`.
+    #[cfg(test)]
+    pub(crate) fn render_at(
+        &self,
+        scale_factor: f64,
+        draw: impl FnOnce(&mut Frame),
+    ) -> Option<Snapshot> {
+        let reduced_motion = self.reduced_motion;
+        offscreen::render_at(self.width, self.height, scale_factor, |frame| {
+            frame.set_reduced_motion(reduced_motion);
+            draw(frame);
+        })
+    }
+
     /// What lasts between inputs, as the runtime would read it now.
     fn state(&self) -> WindowState {
         WindowState {

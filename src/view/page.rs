@@ -94,19 +94,17 @@ const ENTRY_PADDING: (f32, f32) = (1.0, 0.25);
 /// pixels.
 const CHIP_PADDING_PX: f32 = 6.0;
 
-/// How thick a divider and the shown scope tab's underline are, in logical
-/// pixels.
-const RULE_PX: f32 = 1.0;
+/// How thick the shown scope tab's underline is, in logical pixels; a
+/// divider is a hairline.
 const UNDERLINE_PX: f32 = 2.0;
 
 /// How wide the bar marking the shown sidebar entry is, in logical pixels.
 const MARK_PX: f32 = 2.0;
 
-/// Spacing, padding, rule thickness, and font scale for a [`SectionHeader`].
+/// Spacing, padding, and font scale for a [`SectionHeader`].
 const SECTION_HEADER_CHEVRON_PX: f32 = 10.0;
 const SECTION_HEADER_GAP_PX: f32 = 6.0;
 const SECTION_HEADER_PADDING_PX: (f32, f32) = (8.0, 3.0);
-const SECTION_HEADER_RULE_PX: f32 = 0.5;
 const SECTION_HEADER_SCALE: f32 = 0.85;
 const SECTION_HEADER_SPACE_ABOVE_PX: f32 = 8.0;
 
@@ -278,7 +276,7 @@ impl<'a, A: 'static> Page<'a, A> {
             };
             column([
                 label.into(),
-                rule(underline, UNDERLINE_PX).width(Extent::Fraction(1.0)),
+                rule(underline, Extent::Px(UNDERLINE_PX)).width(Extent::Fraction(1.0)),
             ])
             .padding(1.0, 0.0)
             .on_press(move |state: &mut A, _| on_choose(state, index))
@@ -598,7 +596,7 @@ impl<'a, A: 'static> From<SectionHeader<'a, A>> for Element<'a, A> {
         if header.separated {
             let gap = column(Vec::<Element<'_, A>>::new())
                 .height(Extent::Px(SECTION_HEADER_SPACE_ABOVE_PX));
-            let line = rule(ThemeToken::Border, SECTION_HEADER_RULE_PX);
+            let line = rule(ThemeToken::Border, Extent::Hairline);
             return column([gap, line, bar]).gap(Space::Px(0.0));
         }
         bar
@@ -798,7 +796,7 @@ pub fn sidebar<'a, A: 'static, N: Into<Cow<'a, str>>>(
             false => ui(name).muted(),
         };
         let entry = row([
-            rule(mark, MARK_PX)
+            rule(mark, Extent::Px(MARK_PX))
                 .width(Extent::Px(MARK_PX))
                 .height(Extent::Fraction(1.0)),
             label.into(),
@@ -922,14 +920,14 @@ pub fn proportional_keycap<'a, A: 'static>(label: impl Into<Cow<'a, str>>) -> El
 /// A line across its column in the border color, between the parts of a
 /// page or the items of a card.
 pub fn divider<'a, A: 'static>() -> Element<'a, A> {
-    rule(ThemeToken::Border, RULE_PX)
+    rule(ThemeToken::Border, Extent::Hairline)
 }
 
 /// A line down its row in the border color, between a sidebar and the
 /// content.
 pub fn vertical_divider<'a, A: 'static>() -> Element<'a, A> {
     column(Vec::new())
-        .width(Extent::Px(RULE_PX))
+        .width(Extent::Hairline)
         .shrink(0.0)
         .background(ThemeToken::Border)
         .corners(Corners::Square)
@@ -942,10 +940,10 @@ fn ui<'a>(words: impl Into<Cow<'a, str>>) -> Text<'a> {
     text(words).proportional()
 }
 
-/// A bar `thickness` logical pixels tall in the theme's `token` color.
-fn rule<'a, A: 'static>(token: ThemeToken, thickness: f32) -> Element<'a, A> {
+/// A bar `thickness` tall in the theme's `token` color.
+fn rule<'a, A: 'static>(token: ThemeToken, thickness: Extent) -> Element<'a, A> {
     column(Vec::new())
-        .height(Extent::Px(thickness))
+        .height(thickness)
         .background(token)
         .corners(Corners::Square)
 }
@@ -958,6 +956,7 @@ fn rule<'a, A: 'static>(token: ThemeToken, thickness: f32) -> Element<'a, A> {
 mod tests {
     use accesskit::Role;
 
+    use super::super::super::base::color::Rgb;
     use super::super::super::base::theme::{Shape, Spacing, Theme};
     use super::super::super::platform::window_id::WindowId;
     use super::super::super::testing::TreeWindow;
@@ -1261,6 +1260,42 @@ mod tests {
             room
         );
         assert_eq!(second(true, Shape::GRID), second(false, Shape::GRID));
+    }
+
+    /// A divider off the pixel grid, as layout in cells and a scaled
+    /// display leave one.
+    struct Ruled {
+        theme: Theme,
+    }
+
+    impl App for Ruled {
+        fn view(&self, _window: WindowId) -> Element<'_, Self> {
+            let above = column(Vec::new()).height(Extent::Px(10.6));
+            column([above, divider()]).gap(Space::Cells(0.0))
+        }
+
+        fn theme(&self) -> &Theme {
+            &self.theme
+        }
+    }
+
+    #[test]
+    fn test_a_divider_is_one_whole_pixel_wherever_it_falls() {
+        let theme = Theme::dark();
+        let (border, background) = (theme.border, theme.background);
+        let mut window = TreeWindow::new(Ruled { theme }, "ruled", 200, 40);
+        // At 112 dpi, a scale a logical pixel spreads over two rows at.
+        let Some(shot) = window.render_at(1.17) else {
+            return;
+        };
+        let rows: Vec<Rgb> = (8..14).map(|y| shot.pixel(100.0, y as f32 + 0.5)).collect();
+        let lines = rows.iter().filter(|color| **color == border).count();
+        assert_eq!(lines, 1, "one row in the border color: {rows:?}");
+        assert!(
+            rows.iter()
+                .all(|color| *color == border || *color == background),
+            "no row blended: {rows:?}"
+        );
     }
 
     #[test]

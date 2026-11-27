@@ -84,7 +84,7 @@ use super::element::{Direction, Element, Kind, Lazy, MenuRequest, Overlay, Text}
 use super::embed::ScrollStep;
 use super::host::{Host, WindowHost};
 use super::node::{Call, ControlDrag, MovingDrag, Node, Stored, layer_id, over_id};
-use super::props::{Corners, ElementSize, Extras, Payload, Sizing, ThemePadding};
+use super::props::{Corners, ElementSize, Extent, Extras, Payload, Sizing, ThemePadding};
 use super::region::{RegionBox, RegionCx, describe_button, region_id};
 
 // ========================================================================
@@ -2838,6 +2838,21 @@ fn draw_surface<A>(
         false => (surface.background, surface.border),
     };
     if fill.is_none() && border.is_none() {
+        return;
+    }
+    // A hairline is filled on whole pixels, one pixel thick wherever it
+    // falls, rather than blurred across the two its edges cross.
+    let sizing = &extras.sizing;
+    if let (Some(token), None, Corners::Square) = (fill, border, surface.corners)
+        && [sizing.width, sizing.height].contains(&Some(Extent::Hairline))
+    {
+        let (left, top) = (rect.x.round(), rect.y.round());
+        let right = (rect.x + rect.width).round().max(left + 1.0);
+        let bottom = (rect.y + rect.height).round().max(top + 1.0);
+        frame.fill_rect(
+            Rect::new(left, top, right - left, bottom - top),
+            theme.color(token),
+        );
         return;
     }
     let scale = frame.scale_factor();

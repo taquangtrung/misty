@@ -488,6 +488,15 @@ impl<A: App> TreeWindow<A> {
         self.window.render(|frame| store.render(app, id, frame))
     }
 
+    /// What [`TreeWindow::render`] draws, at `scale_factor`.
+    #[cfg(test)]
+    pub(crate) fn render_at(&mut self, scale_factor: f64) -> Option<Snapshot> {
+        let id = self.window.id();
+        let (store, app) = (&mut self.store, &self.app);
+        self.window
+            .render_at(scale_factor, |frame| store.render(app, id, frame))
+    }
+
     // --------------------------------------------------------------------
     // Helpers
     // --------------------------------------------------------------------

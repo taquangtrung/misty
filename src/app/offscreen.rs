@@ -135,9 +135,15 @@ impl Harness {
 
     /// An empty frame `width` by `height` pixels.
     fn frame(&self, width: u32, height: u32) -> Frame {
+        self.frame_at(width, height, SCALE_FACTOR)
+    }
+
+    /// An empty frame `width` by `height` pixels laid out at
+    /// `scale_factor`, its text still measured at the harness's own.
+    fn frame_at(&self, width: u32, height: u32, scale_factor: f64) -> Frame {
         Frame::new(
             (width, height),
-            SCALE_FACTOR,
+            scale_factor,
             self.metrics,
             Arc::clone(&self.fonts),
             self.font.physical_size(SCALE_FACTOR),
@@ -339,6 +345,17 @@ pub(crate) fn gpu() -> Option<Gpu> {
 /// `None`, after printing why (once per test run), when no GPU adapter can
 /// draw it.
 pub(crate) fn render(width: u32, height: u32, draw: impl FnOnce(&mut Frame)) -> Option<Snapshot> {
+    render_at(width, height, SCALE_FACTOR, draw)
+}
+
+/// What [`render`] draws, with the frame at `scale_factor`: for a test of
+/// how what is sized in logical pixels lands on a scaled display.
+pub(crate) fn render_at(
+    width: u32,
+    height: u32,
+    scale_factor: f64,
+    draw: impl FnOnce(&mut Frame),
+) -> Option<Snapshot> {
     let harness = HARNESS.get_or_init(|| Mutex::new(Harness::new()));
     // A test that panicked while drawing leaves the harness usable.
     let mut harness = harness.lock().unwrap_or_else(PoisonError::into_inner);
@@ -363,7 +380,7 @@ pub(crate) fn render(width: u32, height: u32, draw: impl FnOnce(&mut Frame)) -> 
             return None;
         }
     };
-    let mut frame = harness.frame(width, height);
+    let mut frame = harness.frame_at(width, height, scale_factor);
     draw(&mut frame);
     Some(harness.draw(&frame, width, height))
 }
