@@ -21,7 +21,7 @@ use super::super::platform::clipboard::SystemClipboard;
 use super::super::platform::error::Error;
 use super::super::platform::resize::ResizeEdge;
 use super::super::platform::window_id::WindowId;
-use super::super::render::font::Font;
+use super::super::render::font::{Font, UiFont};
 use super::super::render::image::Image;
 use super::window::{OptionAsAlt, Position, WindowGeometry, WindowOptions, monitors};
 
@@ -134,6 +134,9 @@ pub(crate) enum WindowAction {
     Resize(ResizeEdge),
     /// Draw the window's text in this font from the next frame.
     SetFont(Font),
+    /// Draw the window's proportional text in this font from the next
+    /// frame.
+    SetUiFont(UiFont),
     /// Show this picture for the window, or the system's default.
     SetIcon(Option<Image>),
     /// Anchor the input method's candidate window beside this area.
@@ -422,6 +425,14 @@ impl<'a> EventCx<'a> {
     /// is redrawn.
     pub fn set_font(&mut self, font: Font) {
         self.act(WindowAction::SetFont(font));
+        self.request_redraw();
+    }
+
+    /// Draws the window's proportional text (labels, buttons, pages,
+    /// paragraphs) in `ui_font` from its next frame: for an interface
+    /// size the user changes while the app runs. The window is redrawn.
+    pub fn set_ui_font(&mut self, ui_font: UiFont) {
+        self.act(WindowAction::SetUiFont(ui_font));
         self.request_redraw();
     }
 

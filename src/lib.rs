@@ -196,9 +196,9 @@ pub use base::notice::{
 pub use base::paint::{GradientStop, LineCap, LineJoin, LinearGradient, Paint, Stroke};
 pub use base::palette::{ANSI_COLORS, PALETTE_SIZE, Palette};
 pub use base::path::{FillRule, VectorPath, VectorPathBuilder};
-pub use base::spinner;
 pub use base::scroll::SmoothScroll;
 pub use base::scrollbar::{ScrollbarFade, ScrollbarShow};
+pub use base::spinner;
 pub use base::split::{
     Axis, Direction, Divider, PaneId, PaneRect, SplitId, SplitLayout, SplitTree,
 };
@@ -235,7 +235,7 @@ pub use platform::waker::{SendError, Waker};
 pub use platform::window_id::WindowId;
 pub use render::app_fonts::{FontError, font_families, load_font};
 pub use render::draw::SolidFill;
-pub use render::font::{CellMetrics, Font};
+pub use render::font::{CellMetrics, Font, UiFont};
 pub use render::gpu::Gpu;
 #[cfg(feature = "icon-theme")]
 pub use render::icon_theme::{IconTheme, ThemeIcon};

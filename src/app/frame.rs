@@ -72,13 +72,14 @@ pub struct Frame {
     /// What is drawn over the cleared window.
     pub(crate) draw: DrawList,
     /// The size of the window's font in physical pixels, which
-    /// paragraphs are drawn at.
+    /// proportional text is drawn at a share of ([`Frame::set_ui_font`]).
     font_size: f32,
-    /// The weights of the window font's regular and bold text, which
-    /// paragraphs are drawn in.
-    font_weights: FaceWeights,
     /// The fonts every window shares, for measuring paragraphs.
     fonts: Arc<Mutex<Fonts>>,
+    /// The size of proportional text as a share of the window font's.
+    ui_ratio: f32,
+    /// The weights of proportional text's regular and bold runs.
+    ui_weights: FaceWeights,
     /// Whether drawing goes to the overlay rather than the base layer.
     in_overlay: bool,
     /// Whether the window is maximized, as the window system last said.
@@ -118,8 +119,10 @@ pub struct Frame {
 impl Frame {
     /// A frame of a window `width` by `height` physical pixels on a display
     /// scaled by `scale_factor`, whose font is `font_size` physical pixels
-    /// and draws cells `metrics` in size, measuring text with `fonts`.
-    /// Left as is, it clears the window to opaque black.
+    /// and draws cells `metrics` in size, measuring text with `fonts`, its
+    /// proportional text at that size in `font_weights` until
+    /// [`Frame::set_ui_font`] says otherwise. Left as is, it clears the
+    /// window to opaque black.
     pub(crate) fn new(
         (width, height): (u32, u32),
         scale_factor: f64,
@@ -135,7 +138,8 @@ impl Frame {
             corner_radius: 0.0,
             draw: DrawList::default(),
             font_size,
-            font_weights,
+            ui_ratio: 1.0,
+            ui_weights: font_weights,
             fonts,
             in_overlay: false,
             maximized: false,
@@ -512,8 +516,10 @@ impl Frame {
         };
         // Inside `with_font`, text of the window's size is the scope's size,
         // as it was measured: the renderer would draw the window font's.
-        if self.run_style.size.is_some() {
-            let size = Some(self.font_size.to_bits());
+        // So too is text drawn at an interface size apart from the window
+        // font's.
+        if self.run_style.size.is_some() || self.ui_ratio != 1.0 {
+            let size = Some(self.ui_font_size().to_bits());
             for run in shaped
                 .segments
                 .iter_mut()
@@ -559,9 +565,26 @@ impl Frame {
         ParagraphFont {
             line_height: self.metrics.height,
             scale_factor: self.scale_factor as f32,
-            size: self.font_size,
-            weights: self.font_weights,
+            size: self.ui_font_size(),
+            weights: self.ui_weights,
         }
+    }
+
+    /// Sets proportional text `size` physical pixels high, at `weights`:
+    /// the window's [`UiFont`](crate::UiFont). Kept as a share of the
+    /// window font's size, so [`Frame::with_font`] and a scaled view scale
+    /// proportional text with their cells.
+    pub(crate) fn set_ui_font(&mut self, size: f32, weights: FaceWeights) {
+        self.ui_ratio = match self.font_size > 0.0 {
+            true => size / self.font_size,
+            false => 1.0,
+        };
+        self.ui_weights = weights;
+    }
+
+    /// The size proportional text is drawn at here, in physical pixels.
+    fn ui_font_size(&self) -> f32 {
+        self.font_size * self.ui_ratio
     }
 
     /// Draws a box over `rect` in `style`: its shadow, then its fill with
@@ -963,6 +986,24 @@ mod tests {
         assert!(small_cell.height < cell.height && small_width < width);
         assert_eq!(frame.cell_metrics(), cell, "the window's cells after");
         assert_eq!(frame.paragraph_width(&label), width, "and its text size");
+    }
+
+    #[test]
+    fn test_the_ui_font_sizes_proportional_text_apart_from_the_cells() {
+        let mut frame = offscreen::plain_frame(400, 200);
+        let label = Paragraph::plain("Status", TextColor::Token(ThemeToken::Foreground));
+        let (cell, width) = (frame.cell_metrics(), frame.paragraph_width(&label));
+        let size = frame.font_size;
+        frame.set_ui_font(size * 0.5, FaceWeights::DEFAULT);
+        let half = frame.paragraph_width(&label);
+        assert!(half < width * 0.6, "{half} against {width}");
+        assert_eq!(frame.cell_metrics(), cell, "the cells keep the window font");
+        // A part in a smaller font sets its proportional text at the same
+        // share of that font.
+        let small = Font::new(11.0);
+        let mut inside = 0.0;
+        frame.with_font(&small, |frame| inside = frame.paragraph_width(&label));
+        assert!(inside < half, "{inside} against {half}");
     }
 
     #[test]

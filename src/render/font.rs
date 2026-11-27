@@ -67,6 +67,18 @@ pub struct Font {
     weights: FaceWeights,
 }
 
+/// The font a window sets its proportional text in: labels, buttons,
+/// pages, and paragraphs, apart from the monospace [`Font`] its cell grid
+/// takes. The default is the desktop's interface font at the size the
+/// desktop sets it ([`UiFont::desktop`]), in regular and bold weights.
+#[derive(Clone, Debug, PartialEq)]
+pub struct UiFont {
+    /// The size in logical pixels.
+    size: f32,
+    /// The weights its regular and bold text are drawn in.
+    weights: FaceWeights,
+}
+
 /// The weights a [`Font`] draws its regular and bold text in, as CSS
 /// numbers them: 100 thin, 400 regular, 700 bold, 900 black.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -214,6 +226,64 @@ impl FaceWeights {
         bold: DEFAULT_BOLD_WEIGHT,
         normal: DEFAULT_WEIGHT,
     };
+}
+
+impl UiFont {
+    /// The desktop's interface font at `size` logical pixels. Sizes
+    /// outside 6 to 72 are drawn at the nearer bound.
+    pub fn new(size: f32) -> Self {
+        Self {
+            size,
+            weights: FaceWeights::default(),
+        }
+    }
+
+    /// The desktop's interface font at the size the desktop sets its own
+    /// text in: GNOME's interface font setting on Linux, 13 pixels on
+    /// macOS, and 14 on Windows; 15 where the desktop names none. A
+    /// window sets its proportional text in it unless
+    /// [`WindowOptions::with_ui_font`](crate::WindowOptions::with_ui_font)
+    /// says otherwise.
+    pub fn desktop() -> Self {
+        Self::new(desktop_font::interface_size().unwrap_or(DEFAULT_SIZE))
+    }
+
+    /// This font with its regular text drawn at the weight `normal` and
+    /// its bold text at `bold`, as [`Font::with_weights`] takes them, for
+    /// a light interface or one matching the window font's weights.
+    pub fn with_weights(self, normal: u16, bold: u16) -> Self {
+        let weights = FaceWeights {
+            bold: bold.clamp(MIN_WEIGHT, MAX_WEIGHT),
+            normal: normal.clamp(MIN_WEIGHT, MAX_WEIGHT),
+        };
+        Self { weights, ..self }
+    }
+
+    /// The size in logical pixels.
+    pub fn size(&self) -> f32 {
+        self.size
+    }
+
+    /// The weights its regular and bold text are drawn in.
+    pub(crate) fn weights(&self) -> FaceWeights {
+        self.weights
+    }
+
+    /// The size in physical pixels on a display scaled by `scale_factor`,
+    /// held to what can be drawn.
+    pub(crate) fn physical_size(&self, scale_factor: f64) -> f32 {
+        let size = match self.size.is_finite() {
+            true => self.size.clamp(MIN_SIZE, MAX_SIZE),
+            false => DEFAULT_SIZE,
+        };
+        size * scale_factor as f32
+    }
+}
+
+impl Default for UiFont {
+    fn default() -> Self {
+        Self::desktop()
+    }
 }
 
 impl Default for FaceWeights {

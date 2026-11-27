@@ -55,7 +55,7 @@ use winit::window::{Icon, WindowAttributes, WindowLevel as WinitLevel};
 
 use super::super::base::geometry::{Point, Rect};
 use super::super::render::DEFAULT_BUDGET_BYTES;
-use super::super::render::font::Font;
+use super::super::render::font::{Font, UiFont};
 use super::super::render::image::Image;
 
 // ========================================================================
@@ -107,6 +107,8 @@ pub struct WindowOptions {
     option_as_alt: OptionAsAlt,
     /// Whether the window opens maximized.
     maximized: bool,
+    /// The font proportional text is drawn in.
+    ui_font: UiFont,
     /// The smallest size the user may resize to, or `None` for no limit.
     min_size: Option<Size>,
     /// Where the window opens, or `None` to let the system place it.
@@ -278,6 +280,7 @@ impl WindowOptions {
             position: None,
             show: ShowPolicy::default(),
             size: DEFAULT_SIZE,
+            ui_font: UiFont::desktop(),
             taskbar: true,
             texture_budget: DEFAULT_BUDGET_BYTES,
             title: title.into(),
@@ -303,9 +306,16 @@ impl WindowOptions {
         }
     }
 
-    /// These options with text drawn in `font`.
+    /// These options with the cell grid's text drawn in `font`.
     pub fn with_font(self, font: Font) -> Self {
         Self { font, ..self }
+    }
+
+    /// These options with proportional text (labels, buttons, pages,
+    /// paragraphs) drawn in `ui_font` rather than the desktop's
+    /// ([`UiFont::desktop`]).
+    pub fn with_ui_font(self, ui_font: UiFont) -> Self {
+        Self { ui_font, ..self }
     }
 
     /// These options with `icon` as the picture the system shows for the
@@ -464,6 +474,11 @@ impl WindowOptions {
     /// The font text is drawn in.
     pub(crate) fn font(&self) -> &Font {
         &self.font
+    }
+
+    /// The font proportional text is drawn in.
+    pub(crate) fn ui_font(&self) -> &UiFont {
+        &self.ui_font
     }
 
     /// The window's title.

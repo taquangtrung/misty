@@ -79,7 +79,7 @@ enum Asking {
 
 Containers lay elements out: `column` stacks them top to bottom, `row` puts them side by side, and `.padding(columns, rows)` keeps blank cells around them.
 
-Text, and the rows of lists, tables, and trees, is set in the proportional UI font. `.monospace()` puts it on the monospace cell grid instead, for code, keys, or columns that line up by character.
+Text, and the rows of lists, tables, and trees, is set in the proportional UI font. `.monospace()` puts it on the monospace cell grid instead, for code, keys, or columns that line up by character. The UI font is the desktop's own interface font at its size; `WindowOptions::with_ui_font(UiFont::new(13.0))` sets another size, and `with_font` the monospace font apart from it.
 
 ## 4. A list
 

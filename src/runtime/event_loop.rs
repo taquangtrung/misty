@@ -37,7 +37,7 @@ use super::super::platform::schedule::{RedrawSchedule, earliest};
 use super::super::platform::waker::{UserEvent, Waker};
 use super::super::platform::window_group;
 use super::super::platform::window_id::WindowId;
-use super::super::render::font::{CellMetrics, Font};
+use super::super::render::font::{CellMetrics, Font, UiFont};
 use super::super::render::gpu::GpuContext;
 use super::super::render::surface::WindowSurface;
 use super::super::render::{Fonts, FrameTarget, Renderer, ShapingFont};
@@ -105,6 +105,8 @@ struct OpenWindow {
     corner_radius: Option<u16>,
     /// The font the window draws text in.
     font: Font,
+    /// The font the window draws proportional text in.
+    ui_font: UiFont,
     /// The window's identity, as the app knows it.
     id: WindowId,
     /// Reads the window's events into inputs.
@@ -197,6 +199,7 @@ impl<A: Application> Runtime<A> {
         let mut renderer = Renderer::new(&shared.gpu, surface.format());
         renderer.set_texture_budget(options.texture_budget());
         let font = options.font().clone();
+        let ui_font = options.ui_font().clone();
         let metrics = lock(&shared.fonts).measure_cell(&font, window.scale_factor());
         let id = WindowId(window.id());
         // Made while the window is still hidden, as AccessKit requires.
@@ -223,6 +226,7 @@ impl<A: Application> Runtime<A> {
                 .drawn_corner_radius()
                 .filter(|_| compositor::composites(&window)),
             font,
+            ui_font,
             id,
             input: InputReader::default(),
             maximized,
@@ -340,6 +344,7 @@ impl<A: Application> Runtime<A> {
                     open.metrics = lock(&shared.fonts).measure_cell(&font, scale_factor);
                     open.font = font;
                 }
+                (WindowAction::SetUiFont(ui_font), _) => open.ui_font = ui_font,
                 (WindowAction::SetTransparent(transparent), Some(shared)) => {
                     // Corners misty rounds itself need the desktop behind them.
                     let transparent = transparent || open.corner_radius.is_some();
@@ -383,6 +388,10 @@ impl<A: Application> Runtime<A> {
             Arc::clone(&shared.fonts),
             open.font.physical_size(scale_factor),
             open.font.weights(),
+        );
+        frame.set_ui_font(
+            open.ui_font.physical_size(scale_factor),
+            open.ui_font.weights(),
         );
         frame.set_maximized(open.maximized);
         // Rounded only while its edges float on the desktop, and only where
@@ -584,6 +593,7 @@ impl OpenWindow {
             // Carried out with the shared GPU and fonts, or on the window's
             // own state, before any reach here.
             WindowAction::SetFont(_)
+            | WindowAction::SetUiFont(_)
             | WindowAction::SetTitle(_)
             | WindowAction::SetTransparent(_) => {}
         }
