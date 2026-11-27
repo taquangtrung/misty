@@ -157,6 +157,7 @@ pub use app::control::Control;
 pub use app::file_dialog::FileDialog;
 pub use app::focus::{FocusId, FocusTree, Route};
 pub use app::frame::Frame;
+pub use app::hang::{HangPhase, HangReport, HangWatch};
 #[cfg(feature = "global-hotkey")]
 pub use app::hotkey::{GlobalHotkeys, Hotkey, HotkeyError, HotkeyEvent};
 pub use app::ime::{ImeFocus, Preedit, PreeditChange};

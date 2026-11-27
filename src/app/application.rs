@@ -20,6 +20,7 @@ use super::super::render::gpu::Gpu;
 use super::access::AccessAction;
 use super::context::{EventCx, NewWindow, Requests, WindowState};
 use super::frame::Frame;
+use super::hang::HangWatch;
 use super::window::{Size, WindowGeometry, WindowOptions, monitors};
 
 // ========================================================================
@@ -166,6 +167,16 @@ pub trait Application: 'static {
     /// an app may show it instead. A panic here is not caught.
     fn on_panic(&mut self, _cx: &mut AppContext<'_, Self::Message>, why: &str) {
         log::error!("the app panicked and carried on: {why}");
+    }
+
+    /// What to do about a callback that does not return, asked once as the
+    /// app starts: the main thread draws every window, so one callback
+    /// stuck in a loop freezes them all, which a panic guard cannot catch.
+    /// The default logs a [`HangReport`](crate::HangReport) after five
+    /// seconds; an app may write a report and exit or start again instead
+    /// ([`HangWatch::on_hang`]), or watch nothing ([`HangWatch::off`]).
+    fn hang_watch(&self) -> HangWatch {
+        HangWatch::default()
     }
 }
 

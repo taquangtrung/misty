@@ -18,6 +18,7 @@ pub(crate) mod control;
 pub(crate) mod file_dialog;
 pub(crate) mod focus;
 pub(crate) mod frame;
+pub(crate) mod hang;
 #[cfg(feature = "global-hotkey")]
 pub(crate) mod hotkey;
 pub(crate) mod ime;

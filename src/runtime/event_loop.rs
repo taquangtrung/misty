@@ -21,6 +21,7 @@ use super::super::app::access::{AccessTree, access_action};
 use super::super::app::application::{AppContext, Application, OpenView};
 use super::super::app::context::{Requests, WindowAction, WindowState};
 use super::super::app::frame::Frame;
+use super::super::app::hang::HangPhase;
 use super::super::app::window::{
     OptionAsAlt, Position, ShowPolicy, Size, WindowGeometry, WindowOptions, monitors, window_icon,
 };
@@ -41,6 +42,7 @@ use super::super::render::gpu::GpuContext;
 use super::super::render::surface::WindowSurface;
 use super::super::render::{Fonts, FrameTarget, Renderer, ShapingFont};
 use super::guard::{PanicRate, survive};
+use super::watchdog::{self, Beat, Busy};
 
 // ========================================================================
 // Data Structures
@@ -59,6 +61,9 @@ struct Runtime<A: Application> {
     error: Option<Error>,
     /// How to open the first window, until it is open.
     first: Option<WindowOptions>,
+    /// What the main thread marks its callbacks in, for the watchdog to
+    /// find one that hangs; `None` when the app watches nothing.
+    beat: Option<Arc<Beat>>,
     /// The app's recent panics.
     panics: PanicRate,
     /// The event loop's inbox, which the accessibility adapters post to.
@@ -618,6 +623,7 @@ impl<A: Application> ApplicationHandler<UserEvent<A::Message>> for Runtime<A> {
     }
 
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: UserEvent<A::Message>) {
+        let _busy = Busy::begin(self.beat.as_ref(), HangPhase::Message);
         match event {
             UserEvent::Access(event) => self.follow_access(event_loop, event),
             UserEvent::Appearance(appearance) => self.follow_appearance(event_loop, appearance),
@@ -636,6 +642,11 @@ impl<A: Application> ApplicationHandler<UserEvent<A::Message>> for Runtime<A> {
         event: WindowEvent,
     ) {
         let id = WindowId(window_id);
+        let phase = match event {
+            WindowEvent::RedrawRequested => HangPhase::Drawing,
+            _ => HangPhase::Input,
+        };
+        let _busy = Busy::begin(self.beat.as_ref(), phase);
         let Some(open) = self.windows.iter_mut().find(|open| open.id == id) else {
             return;
         };
@@ -678,6 +689,7 @@ impl<A: Application> ApplicationHandler<UserEvent<A::Message>> for Runtime<A> {
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        let _busy = Busy::begin(self.beat.as_ref(), HangPhase::Waiting);
         let app_deadline = self
             .call_app(event_loop, |app, cx| app.about_to_wait(cx))
             .flatten();
@@ -713,9 +725,11 @@ pub fn run<A: Application>(app: A, options: WindowOptions) -> Result<(), Error> 
         // A loop that has closed has no app left to tell.
         let _ = proxy.send_event(UserEvent::Appearance(appearance));
     });
+    let beat = watchdog::start(app.hang_watch());
     let mut runtime = Runtime {
         app,
         appearance,
+        beat,
         clipboard: SystemClipboard::new(),
         error: None,
         first: Some(options),

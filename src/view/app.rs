@@ -6,6 +6,7 @@
 use std::time::Instant;
 
 use super::super::app::context::EventCx;
+use super::super::app::hang::HangWatch;
 use super::super::app::window::{Size, WindowOptions};
 use super::super::base::appearance::Appearance;
 use super::super::base::key::Key;
@@ -219,6 +220,13 @@ pub trait App: Sized + 'static {
     /// app may show it instead. A panic here is not caught.
     fn on_panic(&mut self, why: &str) {
         log::error!("the app panicked and carried on: {why}");
+    }
+
+    /// What to do about a callback that does not return, asked once as the
+    /// app starts, as [`Application::hang_watch`](crate::Application::hang_watch)
+    /// says. The default logs a hang after five seconds.
+    fn hang_watch(&self) -> HangWatch {
+        HangWatch::default()
     }
 
     /// The user's appearance settings (light or dark, the accent color,
