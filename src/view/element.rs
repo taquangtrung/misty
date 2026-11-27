@@ -168,17 +168,17 @@ pub struct Field<'a, A> {
     label: &'a str,
 }
 
-/// A line of text in one or more colors, drawn on the cell grid (or in
-/// the proportional font, [`Text::proportional`]) and cut with an ellipsis
-/// when it does not fit. Made by [`text`], it becomes an [`Element`] with
+/// A line of text in one or more colors, set in the proportional (UI) font
+/// (or on the monospace cell grid, [`Text::monospace`]) and cut with an
+/// ellipsis when it does not fit. Made by [`text`], it becomes an [`Element`] with
 /// `.into()`, or where a function takes one.
 #[derive(Clone, Debug)]
 pub struct Text<'a> {
     /// Whether it is stressed the theme's way ([`Theme::emphasis`](crate::Theme::emphasis)), as a
     /// heading is.
     pub(crate) emphasized: bool,
-    /// Whether it is set in the proportional font rather than on the cell
-    /// grid.
+    /// Whether it is set in the proportional font, as it is unless
+    /// [`Text::monospace`] puts it on the cell grid.
     pub(crate) proportional: bool,
     /// Optional font-size multiplier relative to the theme's UI font.
     pub(crate) scale: Option<f32>,
@@ -814,10 +814,22 @@ impl<'a> Text<'a> {
         }
     }
 
-    /// This text set in the proportional (UI) font, each character as
-    /// wide as its shape, as prose and labels want, rather than on the
-    /// cell grid: a row gives it the width its glyphs take, and it stays a
-    /// line tall.
+    /// This text on the monospace cell grid, each character a cell wide
+    /// (two for a wide one), as code, keys, and columns aligned by
+    /// character want, rather than in the proportional font text is set
+    /// in.
+    pub fn monospace(self) -> Self {
+        Self {
+            proportional: false,
+            ..self
+        }
+    }
+
+    /// This text in the proportional font, as all text is unless
+    /// [`Text::monospace`] puts it on the cell grid.
+    #[deprecated(
+        note = "text is proportional by default; drop the call, or use `monospace` for the cell grid"
+    )]
     pub fn proportional(self) -> Self {
         Self {
             proportional: true,
@@ -912,12 +924,13 @@ pub fn overlay<'a, A>(content: impl Into<Element<'a, A>>) -> Overlay<'a, A> {
     }
 }
 
-/// A line of `text` in the foreground color; [`Text::muted`],
-/// [`Text::color`], and [`Text::then`] change its colors.
+/// A line of `text` in the foreground color, in the proportional (UI)
+/// font; [`Text::muted`], [`Text::color`], and [`Text::then`] change its
+/// colors, and [`Text::monospace`] puts it on the cell grid.
 pub fn text<'a>(text: impl Into<Cow<'a, str>>) -> Text<'a> {
     Text {
         emphasized: false,
-        proportional: false,
+        proportional: true,
         scale: None,
         spans: vec![(text.into(), ThemeToken::Foreground.into())],
     }

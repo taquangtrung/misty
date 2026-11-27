@@ -152,7 +152,7 @@ mod tests {
 
         fn row(&self, index: usize) -> Element<'_, Many> {
             self.built.set(self.built.get() + 1);
-            text(format!("row {index:05}")).into()
+            text(format!("row {index:05}")).monospace().into()
         }
     }
 
@@ -275,7 +275,7 @@ mod tests {
         }
 
         fn row(&self, index: usize) -> Element<'_, Pressed> {
-            let row = Element::from(text(format!("row {index}")))
+            let row = Element::from(text(format!("row {index}")).monospace())
                 .on_pointer_press(|_: &mut Pressed, _| {})
                 .hover_border(super::super::super::base::theme::ThemeToken::Border);
             match index == 0 {
@@ -312,7 +312,10 @@ mod tests {
 
     impl App for Beside {
         fn view(&self, _window: WindowId) -> Element<'_, Self> {
-            super::super::element::row([text("beside").into(), lazy_column(self, 0).into()])
+            super::super::element::row([
+                text("beside").monospace().into(),
+                lazy_column(self, 0).into(),
+            ])
         }
 
         fn theme(&self) -> &Theme {
@@ -326,7 +329,7 @@ mod tests {
         }
 
         fn row(&self, index: usize) -> Element<'_, Beside> {
-            text(format!("row {index:05}")).into()
+            text(format!("row {index:05}")).monospace().into()
         }
     }
 

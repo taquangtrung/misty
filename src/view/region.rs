@@ -514,7 +514,7 @@ mod tests {
     /// the layout gives it (a button draws itself only as wide as its
     /// label).
     fn pad(name: &'static str) -> Element<'static, Probe> {
-        Element::from(text(name))
+        Element::from(text(name).monospace())
             .on_press(|_: &mut Probe, _| {})
             .access_name(name)
     }
@@ -523,7 +523,7 @@ mod tests {
     /// button.
     fn card(_probe: &Probe) -> Element<'_, Probe> {
         column([
-            Element::from(text("Card"))
+            Element::from(text("Card").monospace())
                 .height(Extent::Cells(3.0))
                 .background(ThemeToken::Surface)
                 .hover_background(ThemeToken::Hover)
@@ -543,7 +543,7 @@ mod tests {
             items
                 .iter()
                 .map(|item| {
-                    Element::from(text(item.as_str()))
+                    Element::from(text(item.as_str()).monospace())
                         .id(item.clone())
                         .drag_source((item.clone(), to_right), item.as_str())
                         .access_name(item.as_str())
@@ -749,10 +749,10 @@ mod tests {
     fn test_moves_over_an_element_report_where_and_leaving_once_with_no_extra_rebuild() {
         fn view(_probe: &Probe) -> Element<'_, Probe> {
             column([
-                Element::from(text("Card"))
+                Element::from(text("Card").monospace())
                     .height(Extent::Cells(3.0))
                     .on_pointer_move(|probe: &mut Probe, at| probe.moves.push(at)),
-                Element::from(text("Plain")).on_hover(|_: &mut Probe, _| {}),
+                Element::from(text("Plain").monospace()).on_hover(|_: &mut Probe, _| {}),
             ])
         }
         let mut window = window(view);
@@ -798,7 +798,7 @@ mod tests {
     fn test_a_pointer_press_is_no_tab_stop_and_takes_no_keys() {
         fn view(_probe: &Probe) -> Element<'_, Probe> {
             column([
-                Element::from(text("Pages"))
+                Element::from(text("Pages").monospace())
                     .height(Extent::Cells(3.0))
                     .on_pointer_press(|probe: &mut Probe, press| probe.presses.push(press))
                     .access_name("Pages"),

@@ -181,9 +181,11 @@ impl App for Scroller {
     fn view(&self, _window: WindowId) -> Element<'_, Self> {
         let rows = match self.is_table {
             true => table(&Rows, &self.columns, self.cursor)
+                .monospace()
                 .on_cursor_move(|app: &mut Self, row| app.cursor = row)
                 .into(),
             false => list(&Rows, self.cursor)
+                .monospace()
                 .on_cursor_move(|app: &mut Self, row| app.cursor = row)
                 .into(),
         };

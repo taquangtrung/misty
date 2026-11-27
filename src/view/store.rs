@@ -3097,7 +3097,7 @@ mod tests {
             button("Two")
                 .on_click(|probe: &mut Probe| probe.value = 2.0)
                 .into(),
-            Element::from(text("Three"))
+            Element::from(text("Three").monospace())
                 .on_press(|probe: &mut Probe, _| probe.value = 3.0)
                 .access_name("Three"),
             Element::from(
@@ -3193,6 +3193,7 @@ mod tests {
     /// A list of [`Rows`], activating a row storing its index.
     fn hinted_rows(_probe: &Probe) -> Element<'_, Probe> {
         column([list(&Rows, 0)
+            .monospace()
             .on_activate(|probe: &mut Probe, row| probe.value = row as f64)
             .into()])
     }
@@ -3234,7 +3235,7 @@ mod tests {
     /// setting it to ten times what is dropped.
     fn alt_drag(_probe: &Probe) -> Element<'_, Probe> {
         column([
-            Element::from(text("source"))
+            Element::from(text("source").monospace())
                 .drag_source_with(Mods::ALT, 5_u8, "five")
                 .on_pointer_press(|probe: &mut Probe, _| probe.value = 1.0)
                 .on_pointer_drag(|probe: &mut Probe, drag: PointerDrag| {
@@ -3242,10 +3243,12 @@ mod tests {
                         probe.value = 7.0;
                     }
                 }),
-            Element::from(text("target")).grow(1.0).drop_target(
-                |_: &u8| true,
-                |probe: &mut Probe, carried: u8, _| probe.value = f64::from(carried) * 10.0,
-            ),
+            Element::from(text("target").monospace())
+                .grow(1.0)
+                .drop_target(
+                    |_: &u8| true,
+                    |probe: &mut Probe, carried: u8, _| probe.value = f64::from(carried) * 10.0,
+                ),
         ])
     }
 
@@ -3346,7 +3349,7 @@ mod tests {
             .on_close(|probe: &mut Probe| probe.menu = None);
         column([
             name_field(probe).on_context_menu(|probe: &mut Probe, at| probe.menu = Some(at)),
-            text("plain").into(),
+            text("plain").monospace().into(),
         ])
         .on_context_menu(|probe: &mut Probe, at| {
             probe.menu = Some(at);
@@ -3427,7 +3430,7 @@ mod tests {
     fn test_no_context_menu_is_asked_for_under_a_modal_layer() {
         let mut window = window(200, |probe| {
             let layer = column([Element::from(checkbox("A", false)).id("a")]);
-            column([text("under").into()])
+            column([text("under").monospace().into()])
                 .on_context_menu(|probe: &mut Probe, at| probe.menu = Some(at))
                 .overlay_if(probe.extra, overlay(layer).modal())
         });
@@ -3453,7 +3456,7 @@ mod tests {
             true => hints.header("File"),
             false => hints,
         };
-        column([text("under").into()]).overlay(hints)
+        column([text("under").monospace().into()]).overlay(hints)
     }
 
     /// Whether `window` draws the hints' entry.
@@ -3530,7 +3533,7 @@ mod tests {
         let mut window = window(200, |probe| {
             let mut children = vec![checkbox("Wrap", false).into()];
             if probe.extra {
-                children.push(text("more").into());
+                children.push(text("more").monospace().into());
             }
             column(children)
         });
@@ -3558,7 +3561,7 @@ mod tests {
     #[test]
     fn test_a_widget_is_dropped_once_its_element_is_not_built() {
         let mut window = window(200, |probe| match probe.extra {
-            true => column([text("only text").into()]).id("root"),
+            true => column([text("only text").monospace().into()]).id("root"),
             false => column([name_field(probe).id("name")]).id("root"),
         });
         assert_eq!(window.store().entries.len(), 1);
@@ -3621,7 +3624,7 @@ mod tests {
         let mut window = window(120, |probe| {
             let at = probe.value as usize;
             let rows = (0..40).map(move |row| {
-                let line = text(format!("row {row}")).into();
+                let line = text(format!("row {row}")).monospace().into();
                 match row == at {
                     true => column([line]).keep_in_view(),
                     false => column([line]),
@@ -3659,7 +3662,7 @@ mod tests {
                     slider(RANGE, probe.value).on_change(|probe: &mut Probe, v| probe.value = v),
                 )
             });
-            column([text("under").into()])
+            column([text("under").monospace().into()])
                 .overlay(overlay(column([form(fields).scroll()]).padding(2.0, 1.0)).modal())
         });
         window.window().set_reduced_motion(true);
@@ -3709,7 +3712,7 @@ mod tests {
         let mut window = window(200, |probe| column([name_field(probe)]));
         window.press("<tab>");
         assert!(window.about_to_wait().is_some(), "the caret blinks");
-        let mut idle = self::window(200, |_| column([text("still").into()]));
+        let mut idle = self::window(200, |_| column([text("still").monospace().into()]));
         assert_eq!(idle.about_to_wait(), None);
         let mut sweeping = self::window(200, |_| column([progress(None).into()]));
         assert!(sweeping.about_to_wait().is_some(), "a sweep animates");
@@ -4049,15 +4052,15 @@ mod tests {
     fn pressable_panes(_probe: &Probe) -> Element<'_, Probe> {
         row([
             Element::from(checkbox("A", false)),
-            column([text("L").into()])
+            column([text("L").monospace().into()])
                 .on_press(|_: &mut Probe, _| {})
                 .access_name("L")
                 .id("left"),
             column([
-                column([text("R1").into()])
+                column([text("R1").monospace().into()])
                     .on_press(|_: &mut Probe, _| {})
                     .access_name("R1"),
-                column([text("R2").into()])
+                column([text("R2").monospace().into()])
                     .on_press(|_: &mut Probe, _| {})
                     .access_name("R2"),
             ])
@@ -4101,9 +4104,9 @@ mod tests {
     /// A wide proportional line, a narrow one, and a button after each.
     fn prose(_probe: &Probe) -> Element<'_, Probe> {
         column([
-            row([text("WWW mmm").proportional().into(), button("A").into()]),
-            row([text("iiiiiiii").proportional().into(), button("B").into()]),
-            row([text("iiiiiiii").into(), button("C").into()]),
+            row([text("WWW mmm").into(), button("A").into()]),
+            row([text("iiiiiiii").into(), button("B").into()]),
+            row([text("iiiiiiii").monospace().into(), button("C").into()]),
         ])
     }
 
@@ -4143,9 +4146,7 @@ mod tests {
 
     #[test]
     fn test_a_proportional_text_too_long_for_its_column_ends_in_an_ellipsis() {
-        let window = window(200, |_| {
-            column([text("word ".repeat(80)).proportional().into()])
-        });
+        let window = window(200, |_| column([text("word ".repeat(80)).into()]));
         let lines = shaped(&window);
         assert!(
             lines
@@ -4159,9 +4160,13 @@ mod tests {
     fn test_a_tooltip_repeating_what_its_element_shows_is_left_out() {
         let mut window = window(200, |_| {
             column([
-                Element::from(text("Save")).tooltip("Save"),
-                row([text("Open").into(), text("a file").into()]).tooltip(" Open  a file "),
-                Element::from(text("Save")).tooltip("Save the file"),
+                Element::from(text("Save").monospace()).tooltip("Save"),
+                row([
+                    text("Open").monospace().into(),
+                    text("a file").monospace().into(),
+                ])
+                .tooltip(" Open  a file "),
+                Element::from(text("Save").monospace()).tooltip("Save the file"),
             ])
         });
         let tips: Vec<String> = window
@@ -4178,9 +4183,9 @@ mod tests {
         let long = "word ".repeat(80);
         let mut window = window(200, |_| {
             column([
-                text("short").proportional().into(),
-                text("word ".repeat(80)).proportional().into(),
-                column([text("row ".repeat(80)).proportional().into()]).tooltip("the row's own"),
+                text("short").into(),
+                text("word ".repeat(80)).into(),
+                column([text("row ".repeat(80)).into()]).tooltip("the row's own"),
             ])
         });
         let tips: Vec<String> = window
@@ -4359,7 +4364,7 @@ mod tests {
         let mut window = window(200, |probe| {
             BUILDS.with(|builds| builds.set(builds.get() + 1));
             column([
-                text(format!("{}", probe.value)).into(),
+                text(format!("{}", probe.value)).monospace().into(),
                 column([button("Fit").into()])
                     .on_size_change(|probe: &mut Probe, size| probe.value = f64::from(size.width)),
             ])
@@ -4445,7 +4450,7 @@ mod tests {
     #[test]
     fn test_the_toasts_hold_open_and_expire_on_the_apps_notifier() {
         let mut window = window(300, |probe| {
-            column([text("under").into()]).overlay(
+            column([text("under").monospace().into()]).overlay(
                 toasts(&probe.notifier, |probe: &mut Probe| &mut probe.notifier)
                     .on_open(|probe: &mut Probe, _| probe.opened = true),
             )

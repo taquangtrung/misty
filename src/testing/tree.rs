@@ -670,7 +670,7 @@ mod tests {
     impl App for Probe {
         fn view(&self, window: WindowId) -> Element<'_, Self> {
             if Some(window) == self.second {
-                return column([text("Second window").into()]);
+                return column([text("Second window").monospace().into()]);
             }
             column([
                 text_field(&self.query)
@@ -805,7 +805,7 @@ mod tests {
 
     impl App for Keys {
         fn view(&self, _window: WindowId) -> Element<'_, Self> {
-            column([text("keys").into()])
+            column([text("keys").monospace().into()])
         }
 
         fn key(&mut self, key: Key, cx: &mut AppCx<'_>) -> bool {

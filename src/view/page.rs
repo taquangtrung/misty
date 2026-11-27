@@ -898,7 +898,7 @@ pub fn badge<'a, A: 'static>(label: impl Into<Cow<'a, str>>, tone: ThemeToken) -
 /// A key as a key cap, `label` on the raised color lined with the border:
 /// a keybinding's chord.
 pub fn keycap<'a, A: 'static>(label: impl Into<Cow<'a, str>>) -> Element<'a, A> {
-    row([text(label).into()])
+    row([text(label).monospace().into()])
         .width(Extent::Auto)
         .background(ThemeToken::Raised)
         .border(ThemeToken::Border)
@@ -937,7 +937,7 @@ pub fn vertical_divider<'a, A: 'static>() -> Element<'a, A> {
 /// headings, labels, and descriptions read, rather than on the cell grid
 /// keys and data are set on.
 fn ui<'a>(words: impl Into<Cow<'a, str>>) -> Text<'a> {
-    text(words).proportional()
+    text(words)
 }
 
 /// A bar `thickness` tall in the theme's `token` color.
@@ -1001,7 +1001,7 @@ mod tests {
                     demo.shown = 10 + at
                 })
                 .scrolling(installed)
-                .footer(text("Alpha runs at start").muted())
+                .footer(text("Alpha runs at start").monospace().muted())
                 .into()
         }
 

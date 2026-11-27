@@ -1919,7 +1919,7 @@ mod tests {
     /// A tab strip over a pane taking dragged tabs, recording each drop.
     fn strip_over_pane(probe: &Probe) -> Element<'_, Probe> {
         let tabs = probe.tabs.iter().map(|(key, title)| tab(*key, title));
-        let pane = Element::from(text("pane"))
+        let pane = Element::from(text("pane").monospace())
             .grow(1.0)
             .drop_target(
                 |_: &DraggedTab<u32>| true,
@@ -2036,7 +2036,7 @@ mod tests {
             let line = StatusLine::new(plain("ready"))
                 .with_segment(StatusSegment::new(plain("UTF-8")).with_id("encoding"));
             column([
-                text("content").into(),
+                text("content").monospace().into(),
                 status_bar(line)
                     .on_click(|probe: &mut Probe, id| probe.log.push(id.into()))
                     .into(),
@@ -2081,7 +2081,7 @@ mod tests {
             column([
                 bar(probe),
                 strip(probe),
-                text("").into(),
+                text("").monospace().into(),
                 status_bar(StatusLine::new(plain("ready"))).into(),
             ])
         });

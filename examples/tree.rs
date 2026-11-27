@@ -156,6 +156,7 @@ impl App for TreeDemo {
     fn view(&self, _window: WindowId) -> Element<'_, Self> {
         column([
             tree_view(&self.items, self.cursor.as_ref())
+                .monospace()
                 .selected(&self.selected)
                 .on_cursor_move(|demo: &mut Self, path| demo.cursor = path)
                 .on_select(|demo: &mut Self, paths| demo.selected = paths)

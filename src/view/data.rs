@@ -437,9 +437,21 @@ impl<'a, A, S: ?Sized> List<'a, A, S> {
         }
     }
 
-    /// This list setting its rows in the proportional font, for rows of
-    /// prose rather than columns to line up; fixed when the element is
-    /// first built.
+    /// This list setting its rows on the monospace cell grid, for rows
+    /// whose columns line up by character, rather than in the proportional
+    /// font rows are set in; fixed when the element is first built.
+    pub fn monospace(self) -> Self {
+        Self {
+            proportional: false,
+            ..self
+        }
+    }
+
+    /// This list in the proportional font, as every list is unless
+    /// [`List::monospace`] puts it on the cell grid.
+    #[deprecated(
+        note = "rows are proportional by default; drop the call, or use `monospace` for the cell grid"
+    )]
     pub fn proportional(self) -> Self {
         Self {
             proportional: true,
@@ -713,10 +725,23 @@ impl<'a, A, S: ?Sized> Table<'a, A, S> {
         }
     }
 
-    /// This table setting its cells in the proportional font, as a
-    /// desktop file manager sets its rows, the header following the
+    /// This table setting its cells on the monospace cell grid, as a
+    /// terminal's listing lines up by character, rather than in the
+    /// proportional font cells are set in, the header following the
     /// theme's chrome font either way; fixed when the element is first
     /// built.
+    pub fn monospace(self) -> Self {
+        Self {
+            proportional: false,
+            ..self
+        }
+    }
+
+    /// This table in the proportional font, as every table is unless
+    /// [`Table::monospace`] puts it on the cell grid.
+    #[deprecated(
+        note = "cells are proportional by default; drop the call, or use `monospace` for the cell grid"
+    )]
     pub fn proportional(self) -> Self {
         Self {
             proportional: true,
@@ -1052,10 +1077,22 @@ impl<'a, A, K> Tree<'a, A, K> {
         }
     }
 
-    /// This tree setting its labels in the proportional font, as a
-    /// desktop sidebar sets them, the arrows and indents staying on the
-    /// cell grid so they line up by depth; fixed when the element is first
-    /// built.
+    /// This tree setting its labels on the monospace cell grid rather than
+    /// in the proportional font labels are set in, the arrows and indents
+    /// on the grid either way so they line up by depth; fixed when the
+    /// element is first built.
+    pub fn monospace(self) -> Self {
+        Self {
+            proportional: false,
+            ..self
+        }
+    }
+
+    /// This tree in the proportional font, as every tree is unless
+    /// [`Tree::monospace`] puts it on the cell grid.
+    #[deprecated(
+        note = "labels are proportional by default; drop the call, or use `monospace` for the cell grid"
+    )]
     pub fn proportional(self) -> Self {
         Self {
             proportional: true,
@@ -1863,7 +1900,7 @@ pub fn list<'a, A, S: ListSource + ?Sized>(rows: &'a S, cursor: usize) -> List<'
         on_activate: None,
         on_drop: None,
         on_row_key: None,
-        proportional: false,
+        proportional: true,
         rows,
         selected: &NO_ROWS,
         which_key: false,
@@ -1893,7 +1930,7 @@ pub fn table<'a, A, S: TableSource + ?Sized>(
         on_resize: None,
         on_row_key: None,
         on_sort: None,
-        proportional: false,
+        proportional: true,
         rows,
         selected: &NO_ROWS,
         sort: None,
@@ -1919,7 +1956,7 @@ pub fn tree_view<'a, A, K>(items: &'a TreeItems<K>, cursor: Option<&'a K>) -> Tr
         on_drop: None,
         on_load: None,
         on_row_key: None,
-        proportional: false,
+        proportional: true,
         selected: &[],
     }
 }
@@ -2101,19 +2138,21 @@ mod tests {
     fn full_list(probe: &Probe) -> Element<'_, Probe> {
         column([
             list(&probe.rows, probe.cursor)
+                .monospace()
                 .selected(&probe.selected)
                 .on_cursor_move(|probe: &mut Probe, row| probe.cursor = row)
                 .on_select(|probe: &mut Probe, rows| probe.selected = rows)
                 .on_keys(|probe: &mut Probe, keys| probe.keys = keys)
                 .on_activate(|probe: &mut Probe, row| probe.activated = Some(row))
                 .into(),
-            text("status").into(),
+            text("status").monospace().into(),
         ])
     }
 
     /// A table over the probe's rows in its columns, sorted as it says.
     fn full_table(probe: &Probe) -> Element<'_, Probe> {
         column([table(&probe.rows, &probe.columns, probe.cursor)
+            .monospace()
             .selected(&probe.selected)
             .sort(probe.sort)
             .on_cursor_move(|probe: &mut Probe, row| probe.cursor = row)
@@ -2125,6 +2164,7 @@ mod tests {
     /// A tree over the probe's items.
     fn full_tree(probe: &Probe) -> Element<'_, Probe> {
         column([tree_view(&probe.tree_items, probe.tree_cursor.as_ref())
+            .monospace()
             .selected(&probe.tree_selected)
             .on_cursor_move(|probe: &mut Probe, id| probe.tree_cursor = id)
             .on_select(|probe: &mut Probe, ids| probe.tree_selected = ids)
@@ -2135,6 +2175,7 @@ mod tests {
     /// The probe's tree, its items dragged onto others.
     fn dropping_tree(probe: &Probe) -> Element<'_, Probe> {
         column([tree_view(&probe.tree_items, probe.tree_cursor.as_ref())
+            .monospace()
             .on_cursor_move(|probe: &mut Probe, id| probe.tree_cursor = id)
             .on_drop(|probe: &mut Probe, drop| probe.tree_drops.push(drop))
             .into()])
@@ -2148,6 +2189,7 @@ mod tests {
     /// A list over the probe's rows handing it `x` on a row.
     fn keyed_list(probe: &Probe) -> Element<'_, Probe> {
         column([list(&probe.rows, probe.cursor)
+            .monospace()
             .on_cursor_move(|probe: &mut Probe, row| probe.cursor = row)
             .on_keys(|probe: &mut Probe, keys| probe.keys = keys)
             .on_row_key(
@@ -2217,6 +2259,7 @@ mod tests {
     fn test_a_table_and_a_tree_hand_the_app_its_keys_on_the_cursors_row() {
         let mut tabled = window(|probe| {
             column([table(&probe.rows, &probe.columns, probe.cursor)
+                .monospace()
                 .on_cursor_move(|probe: &mut Probe, row| probe.cursor = row)
                 .on_row_key(is_x, |probe: &mut Probe, row, key| {
                     probe.row_keys.push((row, key.code));
@@ -2228,6 +2271,7 @@ mod tests {
         assert!(tabled.app().app_keys.is_empty());
         let mut window = window(|probe| {
             column([tree_view(&probe.tree_items, probe.tree_cursor.as_ref())
+                .monospace()
                 .on_cursor_move(|probe: &mut Probe, id| probe.tree_cursor = id)
                 .on_row_key(is_x, |probe: &mut Probe, item, key| {
                     probe.tree_keys.push((item, key.code));
@@ -2267,7 +2311,8 @@ mod tests {
 
     #[test]
     fn test_a_list_without_callbacks_keeps_the_apps_cursor_and_selects_nothing() {
-        let mut window = window(|probe| column([list(&probe.rows, probe.cursor).into()]));
+        let mut window =
+            window(|probe| column([list(&probe.rows, probe.cursor).monospace().into()]));
         window.press("j j <space>");
         assert_eq!(focused(&window), "ListItem \"row 0\" focused");
         assert!(
@@ -2318,6 +2363,7 @@ mod tests {
     fn test_a_tables_cell_cursor_moves_with_its_keys_and_tells_the_app() {
         let mut window = window(|probe| {
             column([table(&probe.rows, &probe.columns, probe.cursor)
+                .monospace()
                 .cell_cursor(probe.cell_column)
                 .frozen(1, 0)
                 .on_cell_cursor_move(|probe: &mut Probe, column| probe.cell_column = column)
@@ -2358,9 +2404,9 @@ mod tests {
             shaped(&window(view)).iter().any(|shown| shown == text)
         };
         let proportional_table: fn(&Probe) -> Element<'_, Probe> =
-            |probe| column([table(&probe.rows, &probe.columns, 0).proportional().into()]);
+            |probe| column([table(&probe.rows, &probe.columns, 0).into()]);
         let proportional_tree: fn(&Probe) -> Element<'_, Probe> =
-            |probe| column([tree_view(&probe.tree_items, None).proportional().into()]);
+            |probe| column([tree_view(&probe.tree_items, None).into()]);
         assert!(shapes(proportional_table, "r0c0"));
         assert!(!shapes(full_table, "r0c0"), "a table keeps the cell grid");
         assert!(shapes(proportional_tree, "root"));
@@ -2475,7 +2521,7 @@ mod tests {
 
         impl App for Screen {
             fn view(&self, _window: WindowId) -> Element<'_, Self> {
-                column([cells(&self.buffer).into(), text("below").into()])
+                column([cells(&self.buffer).into(), text("below").monospace().into()])
             }
 
             fn theme(&self) -> &Theme {

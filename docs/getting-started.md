@@ -79,6 +79,8 @@ enum Asking {
 
 Containers lay elements out: `column` stacks them top to bottom, `row` puts them side by side, and `.padding(columns, rows)` keeps blank cells around them.
 
+Text, and the rows of lists, tables, and trees, is set in the proportional UI font. `.monospace()` puts it on the monospace cell grid instead, for code, keys, or columns that line up by character.
+
 ## 4. A list
 
 A `Vec<String>` is already a list's rows. `list` takes the rows and the row the cursor is on; `on_cursor_move` hears where the user moved it, by key or click:
