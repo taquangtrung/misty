@@ -149,6 +149,34 @@ mod render;
 mod runtime;
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
+
+/// The monospace cell grid, for an app that draws text in a terminal's
+/// way: a [`CellBuffer`] of [`Cell`]s in
+/// [`CellStyle`]s, the 256-color ANSI
+/// [`Palette`] their [`CellColor`]s index,
+/// widths measured in cells ([`text_width`]), and the
+/// [`GridScroll`] that scrolls a grid of lines. Text
+/// elsewhere is proportional and needs none of it.
+pub mod grid {
+    pub use super::base::cell::{
+        Attributes, Cell, CellBuffer, CellColor, CellHighlight, CellSource, CellStyle, CellWidth,
+        Cursor, CursorShape, UnderlineStyle,
+    };
+    pub use super::base::palette::{ANSI_COLORS, PALETTE_SIZE, Palette};
+    pub use super::base::text::{
+        char_width, fit as fit_text, truncate as truncate_text, width as text_width,
+    };
+    pub use super::widgets::{GridLayout, GridLine, GridScroll};
+}
+
+// The grid's types at the root as well, as apps named them before `grid`;
+// hidden from the docs, which show them there.
+#[doc(hidden)]
+pub use grid::{
+    ANSI_COLORS, Attributes, Cell, CellBuffer, CellColor, CellHighlight, CellSource, CellStyle,
+    CellWidth, Cursor, CursorShape, PALETTE_SIZE, Palette, UnderlineStyle, char_width, fit_text,
+    text_width, truncate_text,
+};
 pub mod view;
 pub mod widgets;
 
@@ -178,10 +206,6 @@ pub use app::window::{
 };
 pub use base::appearance::{Appearance, ColorScheme};
 pub use base::box_style::{Border, BoxStyle, Shadow};
-pub use base::cell::{
-    Attributes, Cell, CellBuffer, CellColor, CellHighlight, CellSource, CellStyle, CellWidth,
-    Cursor, CursorShape, UnderlineStyle,
-};
 pub use base::color::{HexColorError, Rgb, Rgba};
 pub use base::cursor::CursorIcon;
 pub use base::fuzzy::{
@@ -199,7 +223,6 @@ pub use base::notice::{
     Severity, Task, Toast, ToastId, ToastStack,
 };
 pub use base::paint::{GradientStop, LineCap, LineJoin, LinearGradient, Paint, Stroke};
-pub use base::palette::{ANSI_COLORS, PALETTE_SIZE, Palette};
 pub use base::path::{FillRule, VectorPath, VectorPathBuilder};
 pub use base::scroll::SmoothScroll;
 pub use base::scrollbar::{ScrollbarFade, ScrollbarShow};
@@ -210,9 +233,7 @@ pub use base::split::{
 pub use base::strings::Strings;
 pub use base::styled::{FontFamily, Span, StyledText, TextColor, TextSize};
 pub use base::syntax::SyntaxColors;
-pub use base::text::{
-    ELLIPSIS, char_width, fit as fit_text, truncate as truncate_text, width as text_width,
-};
+pub use base::text::ELLIPSIS;
 pub use base::theme::{ChromeText, Emphasis, Shape, ShapeShadow, Spacing, Theme, ThemeToken};
 #[cfg(feature = "kdl")]
 pub use base::theme_file::{InvalidColor, ThemeFileError};
