@@ -33,6 +33,13 @@ const KEYCAP_PAD_CELLS: f32 = 0.5;
 /// character. The clip still bounds what is drawn.
 const ROOM_SLACK: f32 = 0.5;
 
+/// The narrowest a character is drawn in the proportional font, as a share
+/// of the font size: thinner than any letter, digit, or space. A label is
+/// cut to as many characters as could fit at this width before it is
+/// measured, so a text thousands of characters long costs no more to fit
+/// than one a little longer than its room.
+const NARROWEST_CHAR_EM: f32 = 0.15;
+
 // ========================================================================
 // Functions
 // ========================================================================
@@ -105,6 +112,15 @@ pub(crate) fn fit_proportional(frame: &Frame, text: &StyledText, room: f32) -> S
     // is shaped to be measured, and a command line thousands of characters
     // long cut a character at a time was shaped thousands of times in one
     // frame, and its every cut kept in the shape cache.
+    let most = (room / (frame.paragraph_font().size * NARROWEST_CHAR_EM)).ceil() as usize + 1;
+    let cut;
+    let text = match text.width() > most {
+        true => {
+            cut = text.fit(most);
+            &cut
+        }
+        false => text,
+    };
     let fits = |cells| frame.paragraph_width(&styled_paragraph(&text.fit(cells))) <= room;
     let whole = text.width();
     if fits(whole) {
@@ -268,6 +284,19 @@ mod tests {
             width(&text.fit(fitted.width() + 1)) > room,
             "one more character would have fit"
         );
+    }
+
+    #[test]
+    fn test_a_label_a_million_characters_long_shapes_only_what_could_fit() {
+        let frame = offscreen::plain_frame(400, 100);
+        let text = StyledText::plain(
+            "x".repeat(1_000_000),
+            TextColor::Palette(CellColor::Default),
+        )
+        .with_ellipsis();
+        let fitted = fit_proportional(&frame, &text, 300.0);
+        assert!(fitted.width() < 1_000, "{} characters kept", fitted.width());
+        assert!(frame.paragraph_width(&styled_paragraph(&fitted)) <= 300.0);
     }
 
     fn theme(chrome_text: ChromeText) -> Theme {
