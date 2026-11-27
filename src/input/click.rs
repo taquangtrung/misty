@@ -1,6 +1,10 @@
 //! Telling a double click from two single ones: [`is_double_click`], and
-//! counting presses in a row: [`ClickCounter`].
+//! counting presses in a row: [`ClickCounter`], within the desktop's own
+//! double-click time where it says one ([`desktop_double_click_time`]).
 
+#[cfg(all(unix, not(target_os = "macos")))]
+use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use super::super::base::geometry::Point;
@@ -10,8 +14,17 @@ use super::event::PointerButton;
 // Constants
 // ========================================================================
 
-/// The longest gap between two presses that still makes a double click.
+/// The longest gap between two presses that still makes a double click,
+/// where the desktop says none.
 const DOUBLE_CLICK_TIME: Duration = Duration::from_millis(500);
+
+/// The program and arguments that print GNOME's double-click time, in
+/// milliseconds.
+#[cfg(all(unix, not(target_os = "macos")))]
+const GNOME_DOUBLE_CLICK: (&str, &[&str]) = (
+    "gsettings",
+    &["get", "org.gnome.desktop.peripherals.mouse", "double-click"],
+);
 
 /// How far apart, in logical pixels, two presses of a double click may be.
 const DOUBLE_CLICK_SLOP: f32 = 4.0;
@@ -68,8 +81,8 @@ impl ClickCounter {
 // ========================================================================
 
 /// Whether a press at `point` at `now` completes a double click begun by
-/// `last`: soon enough after it and close enough to it, on a display scaled
-/// by `scale_factor`.
+/// `last`: soon enough after it ([`double_click_time`]) and close enough to
+/// it, on a display scaled by `scale_factor`.
 pub(crate) fn is_double_click(
     last: Option<(Instant, Point)>,
     now: Instant,
@@ -80,9 +93,58 @@ pub(crate) fn is_double_click(
         return false;
     };
     let slop = DOUBLE_CLICK_SLOP * scale_factor as f32;
-    now.saturating_duration_since(at) <= DOUBLE_CLICK_TIME
+    now.saturating_duration_since(at) <= double_click_time()
         && (point.x - first.x).abs() <= slop
         && (point.y - first.y).abs() <= slop
+}
+
+/// The double-click time the runtime read from the desktop, in
+/// milliseconds; 0 until it does, as in a test.
+static DESKTOP_TIME: AtomicU64 = AtomicU64::new(0);
+
+/// The longest gap between two presses that still makes a double click:
+/// the desktop's, once the runtime read it, else half a second, so a test
+/// counts clicks alike on every machine.
+fn double_click_time() -> Duration {
+    match DESKTOP_TIME.load(Ordering::Relaxed) {
+        0 => DOUBLE_CLICK_TIME,
+        millis => Duration::from_millis(millis),
+    }
+}
+
+/// Reads the desktop's double-click time (GNOME's setting on Linux) for
+/// every click from now on, where it sets one: called once by the runtime
+/// as the app starts.
+pub(crate) fn follow_desktop_double_click() {
+    if let Some(time) = desktop_setting() {
+        let millis = u64::try_from(time.as_millis()).unwrap_or(u64::MAX);
+        DESKTOP_TIME.store(millis, Ordering::Relaxed);
+    }
+}
+
+/// The double-click time the desktop sets, where it sets one.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn desktop_setting() -> Option<Duration> {
+    let (program, args) = GNOME_DOUBLE_CLICK;
+    let output = Command::new(program).args(args).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    parse_milliseconds(&String::from_utf8_lossy(&output.stdout))
+}
+
+/// The double-click time the desktop sets, where it sets one.
+#[cfg(not(all(unix, not(target_os = "macos"))))]
+fn desktop_setting() -> Option<Duration> {
+    None
+}
+
+/// The milliseconds `gsettings` prints, as `400` or `uint32 400`; `None`
+/// for none, or for zero.
+#[cfg_attr(not(all(unix, not(target_os = "macos"))), allow(dead_code))]
+fn parse_milliseconds(printed: &str) -> Option<Duration> {
+    let millis: u64 = printed.split_whitespace().last()?.parse().ok()?;
+    (millis > 0).then(|| Duration::from_millis(millis))
 }
 
 // ========================================================================
@@ -92,6 +154,20 @@ pub(crate) fn is_double_click(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_the_desktops_double_click_time_is_read_as_gsettings_prints_it() {
+        assert_eq!(
+            parse_milliseconds("400\n"),
+            Some(Duration::from_millis(400))
+        );
+        assert_eq!(
+            parse_milliseconds("uint32 250"),
+            Some(Duration::from_millis(250))
+        );
+        assert_eq!(parse_milliseconds("0"), None);
+        assert_eq!(parse_milliseconds(""), None);
+    }
 
     #[test]
     fn test_a_double_click_must_be_quick_and_close() {

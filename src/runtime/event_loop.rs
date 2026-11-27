@@ -28,6 +28,7 @@ use super::super::app::window::{
 use super::super::base::appearance::{Appearance, ColorScheme};
 use super::super::base::cursor::CursorIcon;
 use super::super::base::key::KeyScheme;
+use super::super::input::click::follow_desktop_double_click;
 use super::super::input::event::{Input, InputReader};
 use super::super::platform::appearance;
 use super::super::platform::clipboard::SystemClipboard;
@@ -745,6 +746,7 @@ pub fn run<A: Application>(app: A, options: WindowOptions) -> Result<(), Error> 
         let _ = proxy.send_event(UserEvent::Appearance(appearance));
     });
     let beat = watchdog::start(app.hang_watch());
+    follow_desktop_double_click();
     let key_scheme = app.key_scheme();
     let mut runtime = Runtime {
         app,
