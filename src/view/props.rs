@@ -201,6 +201,11 @@ pub(crate) struct Sizing {
     pub(crate) page_inset: bool,
     /// The blank space inside it in logical pixels, across and down.
     pub(crate) padding_px: Option<(f32, f32)>,
+    /// Whether it has the theme's row padding ([`Shape::row_padding`])
+    /// above and below, on top of its other padding.
+    ///
+    /// [`Shape::row_padding`]: crate::Shape::row_padding
+    pub(crate) row_padding: bool,
     /// How much it gives up when its siblings do not fit.
     pub(crate) shrink: Option<f32>,
     /// Its width.
@@ -372,17 +377,30 @@ impl<A> Default for Extras<'_, A> {
     }
 }
 
+/// The theme's paddings an element may take, in logical pixels, as layout
+/// reads them from the theme.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct ThemePadding {
+    /// [`Spacing::page_inset`](crate::Spacing::page_inset).
+    pub(crate) page_inset: u16,
+    /// [`Shape::row_padding`](crate::Shape::row_padding).
+    pub(crate) row_padding: u16,
+}
+
 // ========================================================================
 // Sizing Implementations
 // ========================================================================
 
 impl Sizing {
-    /// The padding in logical pixels, the theme's `page_inset` among it
-    /// where it takes it, in physical pixels at `scale`.
-    pub(crate) fn padding(&self, page_inset: u16, scale: f64) -> Edges {
-        let (mut across, down) = self.padding_px.unwrap_or((0.0, 0.0));
+    /// The padding in logical pixels, the theme's paddings among it where
+    /// it takes them, in physical pixels at `scale`.
+    pub(crate) fn padding(&self, theme: ThemePadding, scale: f64) -> Edges {
+        let (mut across, mut down) = self.padding_px.unwrap_or((0.0, 0.0));
         if self.page_inset {
-            across += f32::from(page_inset);
+            across += f32::from(theme.page_inset);
+        }
+        if self.row_padding {
+            down += f32::from(theme.row_padding);
         }
         let scale = scale as f32;
         Edges::symmetric(across * scale, down * scale)

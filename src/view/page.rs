@@ -958,7 +958,7 @@ fn rule<'a, A: 'static>(token: ThemeToken, thickness: f32) -> Element<'a, A> {
 mod tests {
     use accesskit::Role;
 
-    use super::super::super::base::theme::{Spacing, Theme};
+    use super::super::super::base::theme::{Shape, Spacing, Theme};
     use super::super::super::platform::window_id::WindowId;
     use super::super::super::testing::TreeWindow;
     use super::super::app::App;
@@ -1221,6 +1221,46 @@ mod tests {
         }
         .button_corner();
         assert_eq!((left, top), (0.0, 0.0));
+    }
+
+    /// Two buttons stacked, the first's row taking the theme's row
+    /// padding where `padded`.
+    struct Rowed {
+        padded: bool,
+        theme: Theme,
+    }
+
+    impl App for Rowed {
+        fn view(&self, _window: WindowId) -> Element<'_, Self> {
+            let first = row([button("First").into()]);
+            let first = match self.padded {
+                true => first.row_padding(),
+                false => first,
+            };
+            column([first, button("Second").into()])
+        }
+
+        fn theme(&self) -> &Theme {
+            &self.theme
+        }
+    }
+
+    #[test]
+    fn test_row_padding_takes_the_shapes_room_above_and_below() {
+        let second = |padded, shape| {
+            let theme = Theme {
+                shape,
+                ..Theme::dark()
+            };
+            let window = TreeWindow::new(Rowed { padded, theme }, "rowed", 600, 400);
+            window.center(Role::Button, "Second").y
+        };
+        let room = 2.0 * f32::from(Shape::MODERN.row_padding);
+        assert_eq!(
+            second(true, Shape::MODERN) - second(false, Shape::MODERN),
+            room
+        );
+        assert_eq!(second(true, Shape::GRID), second(false, Shape::GRID));
     }
 
     #[test]

@@ -84,7 +84,7 @@ use super::element::{Direction, Element, Kind, Lazy, MenuRequest, Overlay, Text}
 use super::embed::ScrollStep;
 use super::host::{Host, WindowHost};
 use super::node::{Call, ControlDrag, MovingDrag, Node, Stored, layer_id, over_id};
-use super::props::{Corners, ElementSize, Extras, Payload, Sizing};
+use super::props::{Corners, ElementSize, Extras, Payload, Sizing, ThemePadding};
 use super::region::{RegionBox, RegionCx, describe_button, region_id};
 
 // ========================================================================
@@ -413,8 +413,8 @@ struct Room {
     bar_room: Option<BarRoom>,
     /// The frame's cell size.
     metrics: CellMetrics,
-    /// The theme's page inset, in logical pixels.
-    page_inset: u16,
+    /// The theme's paddings an element may take.
+    padding: ThemePadding,
     /// The frame's scale factor.
     scale: f64,
 }
@@ -487,7 +487,10 @@ impl Store {
         let room = Room {
             bar_room: None,
             metrics: frame.cell_metrics(),
-            page_inset: theme.spacing.page_inset,
+            padding: ThemePadding {
+                page_inset: theme.spacing.page_inset,
+                row_padding: theme.shape.row_padding,
+            },
             scale: frame.scale_factor(),
         };
         self.metrics = Some(room.metrics);
@@ -2733,7 +2736,7 @@ fn bar_outset(room: Room, rect: Rect) -> f32 {
 fn padding((columns, rows): (f32, f32), sizing: Option<&Sizing>, room: Room) -> Edges {
     let metrics = room.metrics;
     let pixels = sizing.map_or(Edges::default(), |sizing| {
-        sizing.padding(room.page_inset, room.scale)
+        sizing.padding(room.padding, room.scale)
     });
     Edges {
         bottom: rows * metrics.height + pixels.bottom,

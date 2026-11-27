@@ -444,6 +444,16 @@ impl<'a, A> Element<'a, A> {
         self
     }
 
+    /// This element with the theme's row padding
+    /// ([`Shape::row_padding`](crate::Shape::row_padding)) above and below,
+    /// on top of its other padding, as the rows of misty's lists and tables
+    /// and their headers have: for a row the app builds of elements, such
+    /// as a table's column headings, to stand as tall as theirs.
+    pub fn row_padding(mut self) -> Self {
+        self.extras().sizing.row_padding = true;
+        self
+    }
+
     /// What runs on the app's state when this element is laid out at
     /// another size than it was last reported at (and once when it is
     /// first laid out, or again after it was gone): its [`ElementSize`], so
