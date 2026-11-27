@@ -9,7 +9,7 @@ use super::super::app::context::EventCx;
 use super::super::app::hang::HangWatch;
 use super::super::app::window::{Size, WindowOptions};
 use super::super::base::appearance::Appearance;
-use super::super::base::key::Key;
+use super::super::base::key::{Key, KeyScheme};
 use super::super::base::theme::Theme;
 use super::super::platform::error::Error;
 use super::super::platform::waker::Waker;
@@ -227,6 +227,14 @@ pub trait App: Sized + 'static {
     /// says. The default logs a hang after five seconds.
     fn hang_watch(&self) -> HangWatch {
         HangWatch::default()
+    }
+
+    /// Which keyboard conventions misty's widgets follow beyond the
+    /// platform's, as
+    /// [`Application::key_scheme`](crate::Application::key_scheme) says.
+    /// None by default.
+    fn key_scheme(&self) -> KeyScheme {
+        KeyScheme::default()
     }
 
     /// The user's appearance settings (light or dark, the accent color,

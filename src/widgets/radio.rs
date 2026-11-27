@@ -272,13 +272,15 @@ impl<T: Clone> RadioGroup<T> {
     }
 
     /// Reacts to `key`, as the module documentation lists, while focused.
-    fn handle_key(&mut self, key: Key) -> RadioGroupResponse<T> {
+    fn handle_key(&mut self, key: Key, vim: bool) -> RadioGroupResponse<T> {
         if !self.focused || key.mods != Mods::NONE {
             return RadioGroupResponse::Ignored;
         }
         match key.code {
-            KeyCode::Down | KeyCode::Right | KeyCode::Char('j' | 'l') => self.step(1),
-            KeyCode::Up | KeyCode::Left | KeyCode::Char('k' | 'h') => self.step(-1),
+            KeyCode::Down | KeyCode::Right => self.step(1),
+            KeyCode::Char('j' | 'l') if vim => self.step(1),
+            KeyCode::Up | KeyCode::Left => self.step(-1),
+            KeyCode::Char('k' | 'h') if vim => self.step(-1),
             KeyCode::Home => self.jump(0),
             KeyCode::End => self.jump(self.options.len().saturating_sub(1)),
             KeyCode::Char(' ') if self.selected.is_none() => self.jump(0),
@@ -357,7 +359,7 @@ impl<T: Clone> Widget for RadioGroup<T> {
     /// the input.
     fn handle(&mut self, input: &Input, cx: &mut EventCx<'_>) -> RadioGroupResponse<T> {
         let response = match input {
-            Input::Key(key) if self.enabled => self.handle_key(*key),
+            Input::Key(key) if self.enabled => self.handle_key(*key, cx.key_scheme().vim),
             Input::PointerButton(button)
                 if button.pressed && button.button == PointerButton::Left && self.enabled =>
             {
@@ -564,7 +566,7 @@ mod tests {
 
     #[test]
     fn test_arrow_keys_choose_as_they_move_and_wrap_both_ways() {
-        let mut window = TestWindow::new(400, 120);
+        let mut window = TestWindow::keyboard_first(400, 120);
         let mut radio = group();
         assert_eq!(
             window.feed(&mut radio, &key("j")),
@@ -612,7 +614,7 @@ mod tests {
 
     #[test]
     fn test_up_from_no_choice_picks_the_last_and_space_the_first() {
-        let mut window = TestWindow::new(400, 120);
+        let mut window = TestWindow::keyboard_first(400, 120);
         let mut radio = group();
         radio.set_focused(true);
         assert_eq!(
@@ -634,7 +636,7 @@ mod tests {
 
     #[test]
     fn test_a_click_chooses_the_option_under_it_and_a_disabled_group_ignores_it() {
-        let mut window = TestWindow::new(400, 120);
+        let mut window = TestWindow::keyboard_first(400, 120);
         let mut radio = group();
         let area = draw(&window, &mut radio);
         let line = area.height / 3.0;
@@ -661,7 +663,7 @@ mod tests {
 
     #[test]
     fn test_the_group_describes_its_name_and_options_and_focuses_the_chosen_one() {
-        let window = TestWindow::new(400, 120);
+        let window = TestWindow::keyboard_first(400, 120);
         let mut radio = group().with_label("Line endings");
         radio.select(1);
         let mut frame = window.frame();
@@ -712,7 +714,7 @@ mod tests {
 
     #[test]
     fn test_sync_chooses_by_value_and_new_options_forget_the_old_rows() {
-        let mut window = TestWindow::new(400, 120);
+        let mut window = TestWindow::keyboard_first(400, 120);
         let mut radio = group();
         draw(&window, &mut radio);
         let third = radio.layout.as_ref().expect("drawn").rows[2];

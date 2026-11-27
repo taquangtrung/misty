@@ -863,6 +863,7 @@ impl<S: FlowSource + ?Sized> Widget for Lent<'_, FlowList, &S> {
     /// the list has the keyboard, and the pointer. Asks for a redraw
     /// whenever what is drawn changed.
     fn handle(&mut self, input: &Input, cx: &mut EventCx<'_>) -> FlowListResponse {
+        self.widget.keys.set_scheme(cx.key_scheme());
         let Some(key) = input.key() else {
             return self.widget.handle_pointer(input, cx);
         };
@@ -1133,7 +1134,7 @@ mod tests {
             count: 100,
             tall: None,
         };
-        let mut window = TestWindow::new(800, 800);
+        let mut window = TestWindow::keyboard_first(800, 800);
         let mut list = FlowList::new();
         draw(&mut list, &rows, 400.0, 100.0);
         assert_eq!(
@@ -1206,7 +1207,7 @@ mod tests {
             count: 100,
             tall: Some(20.0),
         };
-        let mut window = TestWindow::new(800, 800);
+        let mut window = TestWindow::keyboard_first(800, 800);
         let mut list = FlowList::new();
         draw(&mut list, &rows, 400.0, 100.0);
         window.feed(
@@ -1232,7 +1233,7 @@ mod tests {
             count: 30,
             tall: Some(20.0),
         };
-        let mut window = TestWindow::new(800, 800);
+        let mut window = TestWindow::keyboard_first(800, 800);
         let mut list = FlowList::new();
         draw(&mut list, &rows, 400.0, 100.0);
         press_key(&mut window, &mut list, &rows, "S-<down>");
@@ -1252,7 +1253,7 @@ mod tests {
             count: 100,
             tall: None,
         };
-        let mut window = TestWindow::new(800, 800);
+        let mut window = TestWindow::keyboard_first(800, 800);
         let mut list = FlowList::new();
         draw(&mut list, &rows, 400.0, 100.0);
         window.feed(
@@ -1296,7 +1297,7 @@ mod tests {
             count: 100,
             tall: None,
         };
-        let mut window = TestWindow::new(800, 800);
+        let mut window = TestWindow::keyboard_first(800, 800);
         let mut list = FlowList::new().with_row_pointer();
         draw(&mut list, &rows, 400.0, 100.0);
         let button = |pressed, x, y| {

@@ -124,6 +124,25 @@ pub struct PhysicalKey {
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Mods(u8);
 
+/// Which keyboard conventions misty's widgets follow beyond the
+/// platform's own (arrows, Page Up and Down, Home and End, Tab, Enter,
+/// Space, the primary-modifier shortcuts), which they always take. The
+/// default takes neither; an app opts in with
+/// [`Application::key_scheme`](crate::Application::key_scheme).
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+pub struct KeyScheme {
+    /// The Emacs and readline keys: in a text field `C-a` and `C-e` go to
+    /// the line's ends, `C-k`, `C-u`, and `C-w` kill, `M-b` and `M-f` move
+    /// by word (so `C-a` no longer selects all where Ctrl is the primary
+    /// modifier); in a list `C-n` and `C-p` move a row.
+    pub emacs: bool,
+    /// The Vim keys: lists, tables, trees, and grids move with `j`, `k`,
+    /// `h`, `l`, `g g`, `G`, `H`, `M`, `L`, `z t`, the `C-d`, `C-u`, `C-f`,
+    /// `C-b`, `C-e`, and `C-y` scrolls, and counts; radio groups, selects,
+    /// steppers, and scrolling views take `h`, `j`, `k`, and `l`.
+    pub vim: bool,
+}
+
 // ========================================================================
 // Key Implementations
 // ========================================================================
@@ -246,6 +265,42 @@ impl BitOr for Mods {
 impl BitOrAssign for Mods {
     fn bitor_assign(&mut self, rhs: Self) {
         self.0 |= rhs.0;
+    }
+}
+
+// ========================================================================
+// KeyScheme Implementations
+// ========================================================================
+
+impl KeyScheme {
+    /// The platform's keys alone: what every app's widgets take.
+    pub const STANDARD: Self = Self {
+        emacs: false,
+        vim: false,
+    };
+
+    /// The platform's keys and the Vim keys, with the Emacs keys in text
+    /// fields and lists, for a keyboard-first app.
+    pub const VIM_AND_EMACS: Self = Self {
+        emacs: true,
+        vim: true,
+    };
+}
+
+// ========================================================================
+// Functions
+// ========================================================================
+
+/// `code`, with `h`, `j`, `k`, and `l` read as Left, Down, Up, and Right
+/// where `vim`, the app's [`KeyScheme`] taking the Vim keys: for a widget
+/// that moves by the arrows.
+pub(crate) fn vim_arrow(code: KeyCode, vim: bool) -> KeyCode {
+    match code {
+        KeyCode::Char('h') if vim => KeyCode::Left,
+        KeyCode::Char('j') if vim => KeyCode::Down,
+        KeyCode::Char('k') if vim => KeyCode::Up,
+        KeyCode::Char('l') if vim => KeyCode::Right,
+        code => code,
     }
 }
 

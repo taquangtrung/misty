@@ -27,6 +27,7 @@ use super::super::app::window::{
 };
 use super::super::base::appearance::{Appearance, ColorScheme};
 use super::super::base::cursor::CursorIcon;
+use super::super::base::key::KeyScheme;
 use super::super::input::event::{Input, InputReader};
 use super::super::platform::appearance;
 use super::super::platform::clipboard::SystemClipboard;
@@ -64,6 +65,8 @@ struct Runtime<A: Application> {
     /// What the main thread marks its callbacks in, for the watchdog to
     /// find one that hangs; `None` when the app watches nothing.
     beat: Option<Arc<Beat>>,
+    /// Which keyboard conventions widgets follow, as the app chose.
+    key_scheme: KeyScheme,
     /// The app's recent panics.
     panics: PanicRate,
     /// The event loop's inbox, which the accessibility adapters post to.
@@ -257,7 +260,10 @@ impl<A: Application> Runtime<A> {
             .map(|open| OpenView {
                 geometry: open.geometry(),
                 id: open.id,
-                state: open.state(),
+                state: WindowState {
+                    key_scheme: self.key_scheme,
+                    ..open.state()
+                },
                 #[cfg(feature = "dialogs")]
                 window: Some(Arc::clone(&open.window)),
             })
@@ -549,6 +555,8 @@ impl OpenWindow {
         WindowState {
             clicks: self.input.click_count(),
             key_repeat: self.input.key_repeat(),
+            // The runtime fills it in from the app's choice.
+            key_scheme: KeyScheme::STANDARD,
             maximized: self.maximized,
             mods: self.input.mods(),
             physical_key: self.input.physical_key(),
@@ -736,10 +744,12 @@ pub fn run<A: Application>(app: A, options: WindowOptions) -> Result<(), Error> 
         let _ = proxy.send_event(UserEvent::Appearance(appearance));
     });
     let beat = watchdog::start(app.hang_watch());
+    let key_scheme = app.key_scheme();
     let mut runtime = Runtime {
         app,
         appearance,
         beat,
+        key_scheme,
         clipboard: SystemClipboard::new(),
         error: None,
         first: Some(options),

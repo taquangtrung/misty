@@ -129,7 +129,8 @@ impl<A: App> TreeWindow<A> {
     /// [`TreeWindow::deliver`] runs it.
     pub fn new(mut app: A, title: &str, width: u32, height: u32) -> Self {
         let id = WindowId(window::WindowId::from(FIRST_WINDOW_ID));
-        let window = TestWindow::opening(width, height, id);
+        let mut window = TestWindow::opening(width, height, id);
+        window.set_key_scheme(app.key_scheme());
         let frame = window.frame();
         let (waker, inbox) = Waker::channel();
         app.start(waker.clone());
@@ -519,7 +520,8 @@ impl<A: App> TreeWindow<A> {
         let (opened, closed) = self.window.take_windows();
         for (id, options) in opened {
             let size = options.size();
-            let window = TestWindow::opening(size.width, size.height, id);
+            let mut window = TestWindow::opening(size.width, size.height, id);
+            window.set_key_scheme(self.app.key_scheme());
             let mut pane = Pane {
                 frame: window.frame(),
                 store: Store::default(),

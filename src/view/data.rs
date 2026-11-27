@@ -2017,7 +2017,7 @@ mod tests {
 
     use super::*;
     use crate::base::cell::{CellBuffer, CursorShape};
-    use crate::base::key::KeyCode;
+    use crate::base::key::{KeyCode, KeyScheme};
     use crate::platform::window_id::WindowId;
     use crate::testing::{TreeWindow, access_tree};
     use crate::view::app::{App, AppCx};
@@ -2097,6 +2097,10 @@ mod tests {
         fn key(&mut self, key: Key, _cx: &mut AppCx<'_>) -> bool {
             self.app_keys.push(key.code);
             true
+        }
+
+        fn key_scheme(&self) -> KeyScheme {
+            KeyScheme::VIM_AND_EMACS
         }
 
         fn theme(&self) -> &Theme {

@@ -67,6 +67,8 @@ use super::super::base::clock;
 use super::super::base::cursor::CursorIcon;
 use super::super::base::geometry::{Point, Rect};
 use super::super::base::key::{Key, Mods};
+#[cfg(test)]
+use super::super::base::key::KeyScheme;
 use super::super::base::list::ListState;
 use super::super::base::styled::{StyledText, TextColor};
 use super::super::base::theme::{Theme, ThemeToken};
@@ -698,6 +700,14 @@ impl TableCells<'_> {
 // ========================================================================
 
 impl Table {
+    /// This widget taking the Vim and Emacs keys, for misty's tests of
+    /// them.
+    #[cfg(test)]
+    pub(crate) fn with_vim_and_emacs(mut self) -> Self {
+        self.list.set_key_scheme(KeyScheme::VIM_AND_EMACS);
+        self
+    }
+
     // --------------------------------------------------------------------
     // State
     // --------------------------------------------------------------------
@@ -1581,6 +1591,7 @@ impl<S: TableSource + ?Sized> Widget for Lent<'_, Table, &S> {
     /// and does with the rows what a list does. Asks for a redraw whenever
     /// what is drawn changed.
     fn handle(&mut self, input: &Input, cx: &mut EventCx<'_>) -> TableResponse {
+        self.widget.list.set_key_scheme(cx.key_scheme());
         let response = match input {
             Input::Key(key) => self.widget.handle_key(*key),
             Input::KeyReleased(_)
@@ -2010,6 +2021,7 @@ mod tests {
                 .with_align(TextAlign::End)
                 .with_sortable(false),
         ])
+        .with_vim_and_emacs()
     }
 
     /// The header of [`table`] drawn 20 pixels high at the top left, on a
@@ -2055,7 +2067,7 @@ mod tests {
             TableColumn::new("Name", 100.0),
             TableColumn::new("Size", 80.0),
         ];
-        let mut table = Table::new(last.clone());
+        let mut table = Table::new(last.clone()).with_vim_and_emacs();
         table.set_column_widths(&[150.0, 90.0]);
         let mut columns = last.clone();
         columns[0] = columns[0].clone().with_hidden(true);
@@ -2076,7 +2088,7 @@ mod tests {
         );
         columns[2].is_fill = true;
         assert_eq!(drawn_widths(&columns, 600.0, 1.0), [150.0, 0.0, 450.0]);
-        let mut table = Table::new(with_fill());
+        let mut table = Table::new(with_fill()).with_vim_and_emacs();
         assert!(table.set_column_visible(1, false));
         assert!(!table.set_column_visible(9, false), "no such column");
         draw_in(&mut table, 600);
@@ -2091,7 +2103,7 @@ mod tests {
 
     #[test]
     fn test_a_right_click_on_the_header_asks_for_its_menu() {
-        let mut window = crate::testing::TestWindow::new(600, 200);
+        let mut window = crate::testing::TestWindow::keyboard_first(600, 200);
         let mut table = table();
         draw_in(&mut table, 600);
         let at = Point::new(250.0, 5.0);
@@ -2132,7 +2144,7 @@ mod tests {
 
     #[test]
     fn test_columns_wider_than_the_table_scroll_sideways_with_the_header_and_stop_at_the_end() {
-        let mut table = Table::new(with_fill());
+        let mut table = Table::new(with_fill()).with_vim_and_emacs();
         draw_in(&mut table, 300);
         let press = |table: &mut Table, spec| table.handle_key(parse_key(spec).expect("a key"));
         assert_eq!(press(&mut table, "l"), TableResponse::Handled);
@@ -2159,7 +2171,7 @@ mod tests {
 
     #[test]
     fn test_a_count_steps_sideways_that_often_and_dollar_and_zero_go_to_the_edges() {
-        let mut table = Table::new(with_fill());
+        let mut table = Table::new(with_fill()).with_vim_and_emacs();
         draw_in(&mut table, 300);
         for spec in ["2", "l"] {
             table.handle_key(parse_key(spec).expect("a key"));
@@ -2185,7 +2197,7 @@ mod tests {
 
     #[test]
     fn test_dragging_a_fill_column_border_starts_from_its_drawn_width() {
-        let mut table = Table::new(with_fill());
+        let mut table = Table::new(with_fill()).with_vim_and_emacs();
         draw_in(&mut table, 600);
         table.pointer = Some(Point::new(450.0, 5.0));
         assert_eq!(table.press_header(), Some(TableResponse::Handled));
@@ -2443,7 +2455,7 @@ mod tests {
 
     #[test]
     fn test_the_wheel_scrolls_a_default_tables_rows_and_drags_the_cursor_along() {
-        let mut window = crate::testing::TestWindow::new(600, 200);
+        let mut window = crate::testing::TestWindow::keyboard_first(600, 200);
         let mut table = table();
         draw_in(&mut table, 600);
         let inside = Point::new(100.0, 100.0);
@@ -2619,7 +2631,8 @@ mod tests {
         let mut table = Table::new(vec![
             TableColumn::new("Name", 200.0),
             TableColumn::new("Size", 400.0),
-        ]);
+        ])
+        .with_vim_and_emacs();
         let mut frame = offscreen::plain_frame(600, 400);
         let area = Rect::new(0.0, 0.0, 600.0, 400.0);
         table.lend(&Spill).draw(&mut frame, area, &Theme::dark());
@@ -2643,7 +2656,9 @@ mod tests {
 
     #[test]
     fn test_frozen_rows_and_columns_stay_in_place_while_the_others_scroll() {
-        let mut table = Table::new(with_fill()).with_frozen(2, 1);
+        let mut table = Table::new(with_fill())
+            .with_vim_and_emacs()
+            .with_frozen(2, 1);
         table.state_mut().set_count(Files.row_count());
         draw_in(&mut table, 250);
         let top = table.row_rect(0).expect("drawn");
@@ -2696,7 +2711,7 @@ mod tests {
         assert_eq!(press(&mut table, "0"), TableResponse::CellCursorMoved(0));
         draw_in(&mut table, 250);
         assert_eq!(edges(&table), [200.0, 300.0], "back to the first");
-        let mut window = crate::testing::TestWindow::new(250, 200);
+        let mut window = crate::testing::TestWindow::keyboard_first(250, 200);
         let press_at = Input::PointerButton(crate::input::event::ButtonInput::press(
             PointerButton::Left,
             Point::new(220.0, 100.0),

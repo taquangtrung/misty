@@ -23,8 +23,8 @@ use misty::view::{
     checkbox, column, field, form, progress, radio, select, slider, stepper, text, text_area,
 };
 use misty::{
-    App, AppCx, Appearance, ChromeText, Element, Key, KeyCode, Mods, NumberRange, Size, Theme,
-    ThemeToken, WindowId, WindowOptions,
+    App, AppCx, Appearance, ChromeText, Element, Key, KeyCode, KeyScheme, Mods, NumberRange, Size,
+    Theme, ThemeToken, WindowId, WindowOptions,
 };
 
 // ========================================================================
@@ -221,6 +221,11 @@ impl App for Demo {
             chrome_text: self.theme.chrome_text,
             ..appearance.theme()
         };
+    }
+
+    /// The Vim and Emacs keys, as a keyboard-first app takes them.
+    fn key_scheme(&self) -> KeyScheme {
+        KeyScheme::VIM_AND_EMACS
     }
 
     fn theme(&self) -> &Theme {

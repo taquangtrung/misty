@@ -326,12 +326,12 @@ impl<T: Clone> Select<T> {
     // --------------------------------------------------------------------
 
     /// Reacts to `key` as the module documentation lists.
-    fn handle_key(&mut self, key: Key) -> SelectResponse<T> {
+    fn handle_key(&mut self, key: Key, vim: bool) -> SelectResponse<T> {
         if !self.focused && !self.open {
             return SelectResponse::Ignored;
         }
         match self.open {
-            true => self.handle_open_key(key),
+            true => self.handle_open_key(key, vim),
             false => self.handle_closed_key(key),
         }
     }
@@ -365,13 +365,16 @@ impl<T: Clone> Select<T> {
         }
     }
 
-    /// Reacts to `key` while the list is open.
-    fn handle_open_key(&mut self, key: Key) -> SelectResponse<T> {
+    /// Reacts to `key` while the list is open, `j` and `k` moving the
+    /// highlight where `vim`, else typed toward an option as any letter.
+    fn handle_open_key(&mut self, key: Key, vim: bool) -> SelectResponse<T> {
         let plain = key.mods == Mods::NONE;
         let typed = plain || key.mods == Mods::SHIFT;
         match key.code {
-            KeyCode::Down | KeyCode::Char('j') if plain => self.move_highlight(1),
-            KeyCode::Up | KeyCode::Char('k') if plain => self.move_highlight(-1),
+            KeyCode::Down if plain => self.move_highlight(1),
+            KeyCode::Char('j') if plain && vim => self.move_highlight(1),
+            KeyCode::Up if plain => self.move_highlight(-1),
+            KeyCode::Char('k') if plain && vim => self.move_highlight(-1),
             KeyCode::Home if plain => self.highlight(0),
             KeyCode::End if plain => self.highlight(self.options.len().saturating_sub(1)),
             KeyCode::Enter | KeyCode::Char(' ') if plain => self.choose(self.highlighted),
@@ -725,7 +728,7 @@ impl<T: Clone> Widget for Select<T> {
         }
         let was_open = self.open;
         let response = match input {
-            Input::Key(key) => self.handle_key(*key),
+            Input::Key(key) => self.handle_key(*key, cx.key_scheme().vim),
             Input::KeyReleased(_)
             | Input::AppearanceChanged(_)
             | Input::CloseRequested
@@ -1011,7 +1014,7 @@ mod tests {
 
     #[test]
     fn test_closed_arrows_change_the_value_in_place_and_stop_at_the_ends() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut select = select();
         assert_eq!(
             window.feed(&mut select, &key("<down>")),
@@ -1038,7 +1041,7 @@ mod tests {
 
     #[test]
     fn test_open_keys_move_wrap_and_jump_then_choose_or_close_unchanged() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut select = select();
         assert_eq!(
             window.feed(&mut select, &key("<space>")),
@@ -1079,7 +1082,7 @@ mod tests {
 
     #[test]
     fn test_clicks_open_choose_and_close_and_the_open_list_takes_every_press() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut select = select();
         draw(&mut select, &window);
         assert_eq!(
@@ -1120,7 +1123,7 @@ mod tests {
 
     #[test]
     fn test_a_disabled_select_ignores_everything() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut select = select().with_enabled(false);
         draw(&mut select, &window);
         assert_eq!(
@@ -1136,14 +1139,14 @@ mod tests {
 
     #[test]
     fn test_a_long_list_cut_by_the_window_scrolls_to_keep_the_highlight_shown() {
-        let window = TestWindow::new(400, 120);
+        let window = TestWindow::keyboard_first(400, 120);
         let mut select = (0..20).fold(Select::new(), |select, index| {
             select.with_option(index, format!("Item {index}"))
         });
         select.set_focused(true);
         let mut frame = window.frame();
-        select.handle_key(parse_key("<cr>").expect("a valid key"));
-        select.handle_key(parse_key("<end>").expect("a valid key"));
+        select.handle_key(parse_key("<cr>").expect("a valid key"), true);
+        select.handle_key(parse_key("<end>").expect("a valid key"), true);
         let field = Rect::new(0.0, 0.0, 100.0, 30.0);
         select.draw(&mut frame, field, &Theme::dark());
         let list = select
@@ -1163,10 +1166,10 @@ mod tests {
 
     #[test]
     fn test_the_select_describes_itself_and_its_open_list_to_screen_readers() {
-        let window = TestWindow::new(400, 300);
+        let window = TestWindow::keyboard_first(400, 300);
         let mut select = select();
-        select.handle_key(parse_key("<cr>").expect("a valid key"));
-        select.handle_key(parse_key("j").expect("a valid key"));
+        select.handle_key(parse_key("<cr>").expect("a valid key"), true);
+        select.handle_key(parse_key("j").expect("a valid key"), true);
         let mut frame = window.frame();
         let field = Rect::new(10.0, 10.0, 200.0, 30.0);
         select.draw(&mut frame, field, &Theme::dark());
@@ -1209,8 +1212,8 @@ mod tests {
     fn test_the_focused_box_is_ringed_and_the_open_list_lights_its_highlight() {
         let theme = Theme::dark();
         let mut select = select();
-        select.handle_key(parse_key("<cr>").expect("a valid key"));
-        select.handle_key(parse_key("j").expect("a valid key"));
+        select.handle_key(parse_key("<cr>").expect("a valid key"), true);
+        select.handle_key(parse_key("j").expect("a valid key"), true);
         let field = Rect::new(10.0, 10.0, 200.0, 30.0);
         let Some(snapshot) = offscreen::render(400, 300, |frame| {
             frame.clear(Rgba::from(theme.background));
@@ -1247,7 +1250,7 @@ mod tests {
 
     #[test]
     fn test_sync_with_new_options_closes_the_list_and_chooses_by_value() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut select = select();
         draw(&mut select, &window);
         window.feed(&mut select, &key("<space>"));

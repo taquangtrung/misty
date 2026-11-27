@@ -1,7 +1,10 @@
 //! The keys of every list-like widget: [`List`](super::List),
 //! [`Table`](super::Table), [`TreeView`](super::TreeView), and
 //! [`IconGrid`](super::IconGrid) read a key through [`ListKeys`], so they
-//! all move as Vim does over lines, with the emacs line keys as aliases:
+//! all move alike. Every app's lists take the platform's keys: the arrows,
+//! Page Up and Down, Home and End, Space, Enter, and Shift with a motion
+//! key. With the app's [`KeyScheme`] taking the Vim keys they move as Vim
+//! does over lines, and with the Emacs keys `C-n` and `C-p` move a row:
 //!
 //! - Down or `j` or `C-n`, Up or `k` or `C-p`: a row (a cell row in a
 //!   grid); `g j` and `g k` too, a row being a screen line.
@@ -48,7 +51,7 @@
 //! keys, never app commands, so a widget may take them while it has the
 //! keyboard.
 
-use super::super::base::key::{Key, KeyCode, Mods};
+use super::super::base::key::{Key, KeyCode, KeyScheme, Mods};
 use super::super::base::list::ListState;
 use super::super::base::strings::Strings;
 use super::super::input::event::Input;
@@ -92,6 +95,8 @@ pub struct ListKeys {
     half_page: Option<HalfPage>,
     /// The prefix key waiting for the key that completes it.
     prefix: Option<Key>,
+    /// Which keyboard conventions it reads keys by.
+    scheme: KeyScheme,
 }
 
 /// The rows `C-d` and `C-u` scroll, set by a count, and the screen height
@@ -265,6 +270,12 @@ impl ListKeys {
         ends && self.reset()
     }
 
+    /// Reads keys by `scheme` from now on: the app's, which its widget
+    /// takes from the context of each input.
+    pub(crate) fn set_scheme(&mut self, scheme: KeyScheme) {
+        self.scheme = scheme;
+    }
+
     /// Reads `key`, as the module documentation lists.
     pub(crate) fn read(&mut self, key: Key) -> Read {
         if let Some(prefix) = self.prefix.take() {
@@ -276,7 +287,7 @@ impl ListKeys {
             };
         }
         let plain = key.mods == Mods::NONE;
-        if let (KeyCode::Char(c), true) = (key.code, plain) {
+        if let (KeyCode::Char(c), true, true) = (key.code, plain, self.scheme.vim) {
             match (c.to_digit(COUNT_RADIX), self.count) {
                 (Some(0), None) | (None, _) => {}
                 (Some(digit), count) => {
@@ -295,7 +306,7 @@ impl ListKeys {
             return Read::Consumed;
         }
         let count = count.filter(|_| !matches!(key.code, KeyCode::Home | KeyCode::End));
-        match list_key(key) {
+        match list_key(key).filter(|_| takes(self.scheme, key)) {
             Some(list_key) => counted(count, list_key),
             None => Read::Ignored,
         }
@@ -450,6 +461,18 @@ fn list_key(key: Key) -> Option<ListKey> {
     Some(list_key)
 }
 
+/// Whether a list reading keys by `scheme` takes `key`: a letter or a
+/// Ctrl chord only with the Vim keys, but `C-n` and `C-p` with the Emacs
+/// keys; the platform's keys always.
+fn takes(scheme: KeyScheme, key: Key) -> bool {
+    match key.code {
+        KeyCode::Char(' ') if key.mods == Mods::NONE => true,
+        KeyCode::Char('n' | 'p') if key.mods == Mods::CTRL => scheme.emacs,
+        KeyCode::Char(_) => scheme.vim,
+        _ => true,
+    }
+}
+
 /// What `key` completes after `prefix`, or `None` when it completes
 /// nothing.
 fn continuation(prefix: Key, key: Key) -> Option<ListKey> {
@@ -551,9 +574,51 @@ mod tests {
         Input::PointerButton(ButtonInput { pressed, ..press })
     }
 
+    /// A reader taking the Vim and Emacs keys, as most tests here read.
+    fn vim_keys() -> ListKeys {
+        let mut keys = ListKeys::default();
+        keys.set_scheme(KeyScheme::VIM_AND_EMACS);
+        keys
+    }
+
+    #[test]
+    fn test_the_standard_scheme_takes_the_platforms_keys_and_leaves_letters_to_the_app() {
+        let read = |spec: &str| {
+            let mut keys = ListKeys::default();
+            *reads(&mut keys, spec).last().expect("a key")
+        };
+        assert_eq!(read("<down>"), moved(None, Motion::Down));
+        assert_eq!(read("<pagedown>"), moved(None, Motion::PageDown));
+        assert_eq!(
+            read("S-<down>"),
+            Read::Key(CountedKey {
+                count: None,
+                key: ListKey::Extend(Motion::Down)
+            })
+        );
+        assert_eq!(
+            read("<space>"),
+            Read::Key(CountedKey {
+                count: None,
+                key: ListKey::Toggle
+            })
+        );
+        for letters in ["j", "G", "g", "5", "C-d", "C-n"] {
+            assert_eq!(read(letters), Read::Ignored, "{letters} is the app's");
+        }
+        // The Emacs keys alone give `C-n` and `C-p`, not the Vim letters.
+        let mut emacs = ListKeys::default();
+        emacs.set_scheme(KeyScheme {
+            emacs: true,
+            vim: false,
+        });
+        assert_eq!(reads(&mut emacs, "C-n")[0], moved(None, Motion::Down));
+        assert_eq!(reads(&mut emacs, "j")[0], Read::Ignored);
+    }
+
     /// A reader with the count 5 and the prefix `g` waiting.
     fn pending() -> ListKeys {
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         reads(&mut keys, "5 g");
         keys
     }
@@ -570,7 +635,7 @@ mod tests {
 
     /// The last thing the keys of `spec` read as, through a fresh reader.
     fn last_read(spec: &str) -> Read {
-        *reads(&mut ListKeys::default(), spec).last().expect("a key")
+        *reads(&mut vim_keys(), spec).last().expect("a key")
     }
 
     /// A read of `motion` with `count`.
@@ -646,7 +711,7 @@ mod tests {
 
     #[test]
     fn test_a_lone_g_waits_and_a_second_g_goes_to_the_top() {
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         assert_eq!(reads(&mut keys, "g"), [Read::Consumed]);
         assert_eq!(keys.pending_keys(), parse_key_sequence("g").unwrap());
         let hints = keys.hints(&Strings::english());
@@ -658,7 +723,7 @@ mod tests {
 
     #[test]
     fn test_a_key_completing_no_prefix_drops_it_and_runs_nothing() {
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         assert_eq!(
             reads(&mut keys, "g x j"),
             [Read::Consumed, Read::Consumed, moved(None, Motion::Down)]
@@ -685,7 +750,7 @@ mod tests {
         assert_eq!(last_read("1 0 g g"), moved(Some(10), Motion::First));
         assert_eq!(last_read("0"), counted(None, ListKey::LineStart));
         assert_eq!(last_read("3 <home>"), moved(None, Motion::First));
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         assert_eq!(reads(&mut keys, "2 0"), [Read::Consumed, Read::Consumed]);
         assert_eq!(keys.count(), Some(20));
         assert_eq!(
@@ -700,7 +765,7 @@ mod tests {
 
     #[test]
     fn test_counted_motions_move_that_many_rows_or_to_that_row() {
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         let mut state = list(100, 10);
         run(&mut keys, &mut state, "5 j");
         assert_eq!(state.cursor(), 5);
@@ -718,7 +783,7 @@ mod tests {
 
     #[test]
     fn test_ctrl_e_and_ctrl_y_scroll_dragging_the_cursor_only_into_sight() {
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         let mut state = list(100, 10);
         run(&mut keys, &mut state, "5 j C-e");
         assert_eq!(top_and_cursor(&state), (1, 5), "the cursor stays");
@@ -730,7 +795,7 @@ mod tests {
 
     #[test]
     fn test_ctrl_d_scrolls_and_moves_half_a_screen_and_a_count_sets_the_amount() {
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         let mut state = list(100, 10);
         run(&mut keys, &mut state, "j C-d");
         assert_eq!(top_and_cursor(&state), (5, 7), "kept inside the margin");
@@ -747,7 +812,7 @@ mod tests {
 
     #[test]
     fn test_a_ctrl_d_count_past_the_screen_height_is_held_to_it() {
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         let mut state = list(100, 10);
         run(&mut keys, &mut state, "2 5 C-d");
         assert_eq!(top_and_cursor(&state), (10, 12), "a screen, not 25 rows");
@@ -757,7 +822,7 @@ mod tests {
 
     #[test]
     fn test_ctrl_f_pages_a_screen_less_two_rows_and_ends_on_the_last_row() {
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         let mut state = list(30, 10);
         run(&mut keys, &mut state, "C-f");
         assert_eq!(top_and_cursor(&state), (8, 10), "dragged into sight");
@@ -771,7 +836,7 @@ mod tests {
 
     #[test]
     fn test_h_m_and_l_go_to_the_screen_rows_inside_the_margin() {
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         let mut state = list(100, 10);
         run(&mut keys, &mut state, "L");
         assert_eq!(top_and_cursor(&state), (0, 7));
@@ -791,7 +856,7 @@ mod tests {
 
     #[test]
     fn test_z_keys_scroll_the_cursor_row_to_the_top_middle_or_bottom() {
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         let mut state = list(100, 10);
         run(&mut keys, &mut state, "3 0 G z t");
         assert_eq!(top_and_cursor(&state), (27, 29));
@@ -807,7 +872,7 @@ mod tests {
 
     #[test]
     fn test_reset_drops_a_pending_count_and_prefix() {
-        let mut keys = ListKeys::default();
+        let mut keys = vim_keys();
         reads(&mut keys, "3 g");
         assert!(keys.reset());
         assert!(!keys.reset());

@@ -25,7 +25,7 @@ use super::super::app::context::EventCx;
 use super::super::app::frame::Frame;
 use super::super::app::widget::{Outcome, Widget};
 use super::super::base::geometry::{Point, Rect};
-use super::super::base::key::{Key, KeyCode, Mods};
+use super::super::base::key::{Key, KeyCode, Mods, vim_arrow};
 use super::super::base::theme::Theme;
 use super::super::base::transform::Transform;
 use super::super::input::event::{Input, PointerButton, WheelDelta};
@@ -252,7 +252,7 @@ impl Viewport {
     }
 
     /// Carries out a key while focused; whether it was the viewport's.
-    fn handle_key(&mut self, key: Key) -> bool {
+    fn handle_key(&mut self, key: Key, vim: bool) -> bool {
         if !self.focused || !(key.mods == Mods::NONE || key.mods == Mods::SHIFT) {
             return false;
         }
@@ -261,11 +261,11 @@ impl Viewport {
             self.area.x + self.area.width / 2.0,
             self.area.y + self.area.height / 2.0,
         );
-        match key.code {
-            KeyCode::Left | KeyCode::Char('h') => self.pan_by(step, 0.0),
-            KeyCode::Right | KeyCode::Char('l') => self.pan_by(-step, 0.0),
-            KeyCode::Up | KeyCode::Char('k') => self.pan_by(0.0, step),
-            KeyCode::Down | KeyCode::Char('j') => self.pan_by(0.0, -step),
+        match vim_arrow(key.code, vim) {
+            KeyCode::Left => self.pan_by(step, 0.0),
+            KeyCode::Right => self.pan_by(-step, 0.0),
+            KeyCode::Up => self.pan_by(0.0, step),
+            KeyCode::Down => self.pan_by(0.0, -step),
             KeyCode::Char('+' | '=') => self.zoom_at(ZOOM_STEP, middle),
             KeyCode::Char('-') => self.zoom_at(1.0 / ZOOM_STEP, middle),
             KeyCode::Char('0') => self.fit(),
@@ -323,7 +323,7 @@ impl Widget for Viewport {
     fn handle(&mut self, input: &Input, cx: &mut EventCx<'_>) -> ViewportResponse {
         let before = (self.zoom, self.offset);
         let used = match input {
-            Input::Key(key) => self.handle_key(*key),
+            Input::Key(key) => self.handle_key(*key, cx.key_scheme().vim),
             Input::Wheel(wheel) if self.area.contains(wheel.position) => {
                 let (delta, notches) = match wheel.delta {
                     WheelDelta::Lines(lines) => (lines, lines.y),

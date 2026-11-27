@@ -55,6 +55,8 @@ use super::super::base::clock;
 use super::super::base::color::Rgb;
 use super::super::base::geometry::{Point, Rect};
 use super::super::base::key::Key;
+#[cfg(test)]
+use super::super::base::key::KeyScheme;
 use super::super::base::list::ListState;
 use super::super::base::strings::{self, Strings};
 use super::super::base::styled::{Span, StyledText, TextColor, TextSize};
@@ -378,6 +380,14 @@ impl<K: Clone + Eq + Hash> TreeItems<K> {
 // ========================================================================
 
 impl<K: Clone + Eq + Hash> TreeView<K> {
+    /// This widget taking the Vim and Emacs keys, for misty's tests of
+    /// them.
+    #[cfg(test)]
+    pub(crate) fn with_vim_and_emacs(mut self) -> Self {
+        self.list.set_key_scheme(KeyScheme::VIM_AND_EMACS);
+        self
+    }
+
     // --------------------------------------------------------------------
     // Items
     // --------------------------------------------------------------------
@@ -922,6 +932,7 @@ impl<K: Clone + Eq + Hash> Widget for TreeView<K> {
     /// the tree has the keyboard, and the pointer. Asks for a redraw
     /// whenever what is drawn changed.
     fn handle(&mut self, input: &Input, cx: &mut EventCx<'_>) -> TreeViewResponse<K> {
+        self.list.set_key_scheme(cx.key_scheme());
         let response = match input {
             Input::Key(key) => self.handle_key(*key),
             Input::KeyReleased(_)
@@ -1089,7 +1100,7 @@ mod tests {
 
     /// A tree of two folders and a file at the top.
     fn tree() -> TreeView<&'static str> {
-        let mut tree = TreeView::new();
+        let mut tree = TreeView::new().with_vim_and_emacs();
         tree.set_roots(vec![
             TreeItem::branch("docs", "docs"),
             TreeItem::branch("src", "src"),
@@ -1100,7 +1111,7 @@ mod tests {
 
     /// A sidebar: a place under a section, then two bookmarks under another.
     fn sidebar() -> TreeView<&'static str> {
-        let mut tree = TreeView::new();
+        let mut tree = TreeView::new().with_vim_and_emacs();
         tree.set_roots(vec![
             TreeItem::section("places", "PLACES"),
             TreeItem::leaf("home", "Home"),
@@ -1351,7 +1362,7 @@ mod tests {
     fn test_an_item_with_content_draws_it_and_screen_readers_keep_the_label() {
         use crate::base::styled::{Span, StyledText};
         use crate::widgets::row_content::RowContent;
-        let mut tree = TreeView::new();
+        let mut tree = TreeView::new().with_vim_and_emacs();
         let styled = StyledText::new()
             .with(Span::new("READ", ThemeToken::Accent.into()))
             .with(Span::new("ME", ThemeToken::Muted.into()));
@@ -1428,7 +1439,7 @@ mod tests {
 
     #[test]
     fn test_a_click_on_a_section_moves_nothing_and_activates_nothing() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut tree = sidebar();
         drawn(&mut tree);
         let rect = tree.row_rect(2).expect("drawn");

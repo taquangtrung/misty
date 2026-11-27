@@ -490,8 +490,9 @@ impl TextArea {
     /// clipboard and writing a new selection to its primary selection.
     /// Hand it the keys of the window while the area is focused.
     pub(crate) fn handle_key(&mut self, key: Key, cx: &mut EventCx<'_>) -> TextAreaResponse {
+        let emacs = cx.key_scheme().emacs;
         let clipboard = cx.clipboard();
-        let response = self.edit_by_key(key, clipboard);
+        let response = self.edit_by_key(key, emacs, clipboard);
         if !matches!(response, TextAreaResponse::Ignored) {
             self.follow_caret = true;
         }
@@ -504,13 +505,18 @@ impl TextArea {
     }
 
     /// Carries out `key` as [`TextArea::handle_key`] does, but for the
-    /// primary selection.
-    fn edit_by_key(&mut self, key: Key, clipboard: &mut SystemClipboard) -> TextAreaResponse {
+    /// primary selection, taking the Emacs keys where `emacs`.
+    fn edit_by_key(
+        &mut self,
+        key: Key,
+        emacs: bool,
+        clipboard: &mut SystemClipboard,
+    ) -> TextAreaResponse {
         let mods = key.mods;
         let plain = mods == Mods::NONE;
         let shift = mods == Mods::SHIFT;
-        let ctrl = mods == Mods::CTRL;
-        let to_text_edge = ctrl || mods == Mods::CTRL | Mods::SHIFT;
+        let to_text_edge = mods == Mods::CTRL || mods == Mods::CTRL | Mods::SHIFT;
+        let emacs_ctrl = emacs && mods == Mods::CTRL;
         let extend = mods.contains(Mods::SHIFT);
         let caret = self.edit.caret();
         let page = self.page_rows();
@@ -518,18 +524,20 @@ impl TextArea {
             KeyCode::Enter if plain => Some(self.edit.insert_newline()),
             KeyCode::Up if plain || shift => Some(self.move_rows(-1, extend)),
             KeyCode::Down if plain || shift => Some(self.move_rows(1, extend)),
-            KeyCode::Char('p') if ctrl => Some(self.move_rows(-1, false)),
-            KeyCode::Char('n') if ctrl => Some(self.move_rows(1, false)),
+            KeyCode::Char('p') if emacs_ctrl => Some(self.move_rows(-1, false)),
+            KeyCode::Char('n') if emacs_ctrl => Some(self.move_rows(1, false)),
             KeyCode::PageUp if plain || shift => Some(self.move_rows(-page, extend)),
             KeyCode::PageDown if plain || shift => Some(self.move_rows(page, extend)),
             KeyCode::Home if plain || shift => Some(self.move_to_row_edge(false, extend)),
             KeyCode::End if plain || shift => Some(self.move_to_row_edge(true, extend)),
             KeyCode::Home if to_text_edge => Some(self.edit.move_to(0, extend)),
             KeyCode::End if to_text_edge => Some(self.edit.move_to(self.edit.text().len(), extend)),
-            KeyCode::Char('a') if ctrl => {
+            KeyCode::Char('a') if emacs_ctrl => {
                 Some(self.edit.move_to(self.edit.line_start(caret), false))
             }
-            KeyCode::Char('e') if ctrl => Some(self.edit.move_to(self.edit.line_end(caret), false)),
+            KeyCode::Char('e') if emacs_ctrl => {
+                Some(self.edit.move_to(self.edit.line_end(caret), false))
+            }
             KeyCode::Backspace
             | KeyCode::Char(_)
             | KeyCode::Delete
@@ -547,7 +555,7 @@ impl TextArea {
             | KeyCode::Tab
             | KeyCode::Up => None,
         };
-        edit.or_else(|| edit_by_key(&mut self.edit, key, clipboard))
+        edit.or_else(|| edit_by_key(&mut self.edit, key, emacs, clipboard))
             .map_or(TextAreaResponse::Ignored, response_of)
     }
 
@@ -1360,7 +1368,7 @@ mod tests {
 
     #[test]
     fn test_up_and_down_keep_the_column_across_a_short_line() {
-        let mut window = TestWindow::new(800, 600);
+        let mut window = TestWindow::keyboard_first(800, 600);
         let mut area = TextArea::with_text("first line\nab\nthird line");
         area.select(7..7);
         keys(&mut area, &mut window, &["<down>"]);
@@ -1377,7 +1385,7 @@ mod tests {
 
     #[test]
     fn test_vertical_moves_follow_the_wrapped_rows() {
-        let mut window = TestWindow::new(800, 600);
+        let mut window = TestWindow::keyboard_first(800, 600);
         let mut area = TextArea::with_text("the quick brown fox");
         draw(&mut area, 10.0, 5.0);
         keys(&mut area, &mut window, &["C-<home>", "<right>", "<right>"]);
@@ -1393,7 +1401,7 @@ mod tests {
 
     #[test]
     fn test_enter_starts_a_line_and_tab_and_esc_are_left_to_the_app() {
-        let mut window = TestWindow::new(800, 600);
+        let mut window = TestWindow::keyboard_first(800, 600);
         let mut area = TextArea::new();
         keys(&mut area, &mut window, &["a", "b"]);
         assert_eq!(
@@ -1415,7 +1423,7 @@ mod tests {
 
     #[test]
     fn test_shift_down_selects_across_lines_and_copy_keeps_the_line_feed() {
-        let mut window = TestWindow::new(800, 600);
+        let mut window = TestWindow::keyboard_first(800, 600);
         let mut area = TextArea::with_text("alpha\nbeta\ngamma");
         keys(&mut area, &mut window, &["C-<home>", "<right>", "S-<down>"]);
         assert_eq!(area.selection(), Some(1..7));
@@ -1433,7 +1441,7 @@ mod tests {
 
     #[test]
     fn test_the_area_scrolls_to_the_caret_and_the_wheel_scrolls_without_snapping_back() {
-        let mut window = TestWindow::new(800, 600);
+        let mut window = TestWindow::keyboard_first(800, 600);
         let lines: Vec<String> = (0..10).map(|line| format!("line {line}")).collect();
         let mut area = TextArea::with_text(&lines.join("\n"));
         draw(&mut area, 20.0, 3.0);
@@ -1560,7 +1568,7 @@ mod tests {
 
     #[test]
     fn test_proportional_up_and_down_keep_the_pixel_column_not_the_cell_column() {
-        let mut window = TestWindow::new(400, 200);
+        let mut window = TestWindow::keyboard_first(400, 200);
         let mut area = TextArea::with_text("iiiiiiii\nWWWWWWWW").with_proportional_font();
         draw(&mut area, 40.0, 5.0);
         area.select(4..4);
@@ -1578,7 +1586,7 @@ mod tests {
 
     #[test]
     fn test_a_proportional_press_lands_between_the_glyphs_under_it() {
-        let mut window = TestWindow::new(400, 200);
+        let mut window = TestWindow::keyboard_first(400, 200);
         let mut area = TextArea::with_text("iiiiWWWW\nmore").with_proportional_font();
         draw(&mut area, 40.0, 5.0);
         let point = glyph_point(&area, 6);
@@ -1593,7 +1601,7 @@ mod tests {
 
     #[test]
     fn test_proportional_text_wraps_where_its_paragraph_wraps_and_measures_so() {
-        let mut window = TestWindow::new(400, 200);
+        let mut window = TestWindow::keyboard_first(400, 200);
         let text = "the quick brown fox jumps over the lazy dog again and again";
         let mut area = TextArea::with_text(text).with_proportional_font();
         let (frame, metrics) = draw(&mut area, 12.0, 8.0);
@@ -1624,7 +1632,7 @@ mod tests {
 
     #[test]
     fn test_proportional_keys_between_frames_follow_the_text_as_typed() {
-        let mut window = TestWindow::new(400, 200);
+        let mut window = TestWindow::keyboard_first(400, 200);
         let mut area = TextArea::new().with_proportional_font();
         draw(&mut area, 40.0, 5.0);
         area.edit.insert("WWWW\niiiiiiii");

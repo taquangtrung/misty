@@ -51,6 +51,8 @@ use super::super::base::clock;
 use super::super::base::color::Rgba;
 use super::super::base::geometry::{Point, Rect};
 use super::super::base::key::{Key, KeyCode, Mods};
+#[cfg(test)]
+use super::super::base::key::KeyScheme;
 use super::super::base::list::{ListState, scroll_to_show};
 use super::super::base::theme::Theme;
 use super::super::input::click::is_double_click;
@@ -226,6 +228,14 @@ pub trait GridSource {
 // ========================================================================
 
 impl IconGrid {
+    /// This widget taking the Vim and Emacs keys, for misty's tests of
+    /// them.
+    #[cfg(test)]
+    pub(crate) fn with_vim_and_emacs(mut self) -> Self {
+        self.keys.set_scheme(KeyScheme::VIM_AND_EMACS);
+        self
+    }
+
     /// The grid lent `source`'s items and the `thumbnails` pool they load
     /// in, as a [`Widget`] to hand inputs and draw.
     pub fn lend<'a, S: GridSource + ?Sized>(
@@ -737,6 +747,7 @@ impl<S: GridSource + ?Sized> Widget for Lent<'_, IconGrid, GridData<'_, S>> {
     /// the grid has the keyboard, and the pointer. Asks for a redraw
     /// whenever what is drawn changed.
     fn handle(&mut self, input: &Input, cx: &mut EventCx<'_>) -> IconGridResponse {
+        self.widget.keys.set_scheme(cx.key_scheme());
         let response = match input {
             Input::Key(key) => self.widget.handle_key(*key),
             Input::KeyReleased(_)
@@ -948,7 +959,7 @@ mod tests {
 
     /// A grid of `count` items laid out as [`layout`] at the top.
     fn grid(count: usize) -> IconGrid {
-        let mut grid = IconGrid::new();
+        let mut grid = IconGrid::new().with_vim_and_emacs();
         grid.layout = Some(layout(0.0));
         grid.count = count;
         grid
@@ -1019,7 +1030,7 @@ mod tests {
         let theme = Theme::dark();
         let start = Instant::now();
         let mut thumbnails = never_loading();
-        let mut grid = IconGrid::new();
+        let mut grid = IconGrid::new().with_vim_and_emacs();
         grid.draw_at(&mut frame, area, &photos, &mut thumbnails, &theme, start);
         grid.set_cursor(500);
         grid.draw_at(&mut frame, area, &photos, &mut thumbnails, &theme, start);
@@ -1144,7 +1155,7 @@ mod tests {
         let id = FocusId::new("photos");
         let mut frame = offscreen::plain_frame(800, 600);
         frame.set_reduced_motion(true);
-        let mut grid = IconGrid::new();
+        let mut grid = IconGrid::new().with_vim_and_emacs();
         let mut thumbnails = never_loading();
         let photos = Photos(1000);
         let area = Rect::new(0.0, 0.0, 800.0, 600.0);
@@ -1181,7 +1192,7 @@ mod tests {
             thumbnails.poll();
             std::thread::yield_now();
         }
-        let mut grid = IconGrid::new();
+        let mut grid = IconGrid::new().with_vim_and_emacs();
         let area = Rect::new(0.0, 0.0, 400.0, 300.0);
         let Some(snapshot) = offscreen::render(400, 300, |frame| {
             frame.clear(Rgba::from(theme.background));
@@ -1228,7 +1239,7 @@ mod tests {
 
     #[test]
     fn test_state_set_before_a_frame_survives_and_shrinking_keeps_the_selection() {
-        let mut grid = IconGrid::new();
+        let mut grid = IconGrid::new().with_vim_and_emacs();
         grid.set_cursor(5);
         grid.set_selected([3, 40]);
         assert_eq!(grid.cursor(), 5, "no frame has counted the items yet");
@@ -1289,7 +1300,7 @@ mod tests {
             },
             || {},
         );
-        let mut grid = IconGrid::new();
+        let mut grid = IconGrid::new().with_vim_and_emacs();
         let mut frame = offscreen::plain_frame(400, 300);
         let area = Rect::new(0.0, 0.0, 400.0, 300.0);
         grid.lend(&Folders(6), &mut thumbnails)
@@ -1302,6 +1313,7 @@ mod tests {
     #[test]
     fn test_an_apps_zoom_steps_and_minimum_width_shape_the_cells() {
         let mut grid = IconGrid::new()
+            .with_vim_and_emacs()
             .with_zoom_steps([16.0, 32.0])
             .with_min_cell_width(80.0);
         assert_eq!(grid.zoom(), 1, "held to the steps there are");
@@ -1333,9 +1345,17 @@ mod tests {
                 .filter(|segment| segment.wrap.is_some())
                 .count()
         };
-        assert_eq!(shaped(IconGrid::new()), 0, "on the cell grid");
         assert_eq!(
-            shaped(IconGrid::new().with_proportional_font()),
+            shaped(IconGrid::new().with_vim_and_emacs()),
+            0,
+            "on the cell grid"
+        );
+        assert_eq!(
+            shaped(
+                IconGrid::new()
+                    .with_vim_and_emacs()
+                    .with_proportional_font()
+            ),
             2,
             "a label an item"
         );

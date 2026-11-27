@@ -35,7 +35,7 @@ use super::super::app::widget::{Outcome, Widget};
 use super::super::base::clock;
 use super::super::base::color::Rgb;
 use super::super::base::geometry::{Point, Rect};
-use super::super::base::key::{Key, KeyCode, Mods};
+use super::super::base::key::{Key, KeyCode, Mods, vim_arrow};
 use super::super::base::scroll::SmoothScroll;
 use super::super::base::scrollbar::{ScrollbarFade, ScrollbarShow};
 use super::super::base::theme::Theme;
@@ -302,7 +302,7 @@ impl ScrollView {
     // ------------------------------------------------------------------
 
     /// Reacts to `key` while focused, as the module documentation lists.
-    fn handle_key(&mut self, key: Key) -> ScrollViewResponse {
+    fn handle_key(&mut self, key: Key, vim: bool) -> ScrollViewResponse {
         let Some(layout) = self.layout.filter(|_| self.focused) else {
             return ScrollViewResponse::Ignored;
         };
@@ -311,31 +311,24 @@ impl ScrollView {
         let shifted = key.mods == Mods::SHIFT;
         let now = clock::now();
         let go_pending = mem::take(&mut self.go_pending);
-        let (axis, target) = match key.code {
-            KeyCode::Char(GO_PREFIX) if plain && go_pending => (Axis::Vertical, 0.0),
-            KeyCode::Char(GO_PREFIX) if plain => {
+        let (axis, target) = match vim_arrow(key.code, vim) {
+            KeyCode::Char(GO_PREFIX) if plain && vim && go_pending => (Axis::Vertical, 0.0),
+            KeyCode::Char(GO_PREFIX) if plain && vim => {
                 self.go_pending = true;
                 return ScrollViewResponse::Handled;
             }
             KeyCode::Char(' ') if shifted => (Axis::Vertical, self.scroll_y.target() - page),
-            KeyCode::Up | KeyCode::Char('k') if plain => {
-                (Axis::Vertical, self.scroll_y.target() - layout.line)
-            }
-            KeyCode::Down | KeyCode::Char('j') if plain => {
-                (Axis::Vertical, self.scroll_y.target() + layout.line)
-            }
-            KeyCode::Left | KeyCode::Char('h') if plain => {
-                (Axis::Horizontal, self.scroll_x.target() - layout.line)
-            }
-            KeyCode::Right | KeyCode::Char('l') if plain => {
-                (Axis::Horizontal, self.scroll_x.target() + layout.line)
-            }
+            KeyCode::Up if plain => (Axis::Vertical, self.scroll_y.target() - layout.line),
+            KeyCode::Down if plain => (Axis::Vertical, self.scroll_y.target() + layout.line),
+            KeyCode::Left if plain => (Axis::Horizontal, self.scroll_x.target() - layout.line),
+            KeyCode::Right if plain => (Axis::Horizontal, self.scroll_x.target() + layout.line),
             KeyCode::PageUp if plain => (Axis::Vertical, self.scroll_y.target() - page),
             KeyCode::PageDown | KeyCode::Char(' ') if plain => {
                 (Axis::Vertical, self.scroll_y.target() + page)
             }
             KeyCode::Home if plain => (Axis::Vertical, 0.0),
-            KeyCode::End | KeyCode::Char('G') if plain => (Axis::Vertical, f32::INFINITY),
+            KeyCode::End if plain => (Axis::Vertical, f32::INFINITY),
+            KeyCode::Char('G') if plain && vim => (Axis::Vertical, f32::INFINITY),
             KeyCode::Backspace
             | KeyCode::Char(_)
             | KeyCode::Delete
@@ -662,7 +655,7 @@ impl Widget for ScrollView {
     fn handle(&mut self, input: &Input, cx: &mut EventCx<'_>) -> ScrollViewResponse {
         self.follow_reduced_motion(cx.reduced_motion());
         let response = match input {
-            Input::Key(key) => self.handle_key(*key),
+            Input::Key(key) => self.handle_key(*key, cx.key_scheme().vim),
             Input::KeyReleased(_)
             | Input::AppearanceChanged(_)
             | Input::CloseRequested
@@ -855,7 +848,7 @@ mod tests {
     /// A window `width` by `height` whose motion is reduced, so scrolls
     /// jump.
     fn still(width: u32, height: u32) -> TestWindow {
-        let mut window = TestWindow::new(width, height);
+        let mut window = TestWindow::keyboard_first(width, height);
         window.set_reduced_motion(true);
         window
     }
@@ -1054,7 +1047,7 @@ mod tests {
 
     #[test]
     fn test_a_key_glides_there_and_asks_for_frames_until_it_lands() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut view = view(&window);
         view.set_focused(true);
         window.feed(&mut view, &key("<pagedown>"));

@@ -32,8 +32,9 @@ use std::collections::BTreeSet;
 
 use misty::view::{column, table, text};
 use misty::{
-    App, AppCx, Element, HeaderMenu, Key, KeyCode, ListKeys, Mods, RowDrop, SortDirection, SortKey,
-    TableColumn, TableSource, TextAlign, Theme, ThemeToken, WindowId, WindowOptions, key_label,
+    App, AppCx, Element, HeaderMenu, Key, KeyCode, KeyScheme, ListKeys, Mods, RowDrop,
+    SortDirection, SortKey, TableColumn, TableSource, TextAlign, Theme, ThemeToken, WindowId,
+    WindowOptions, key_label,
 };
 
 // ========================================================================
@@ -324,6 +325,11 @@ impl App for TableDemo {
         }
         cx.exit();
         true
+    }
+
+    /// The Vim and Emacs keys, as a keyboard-first app takes them.
+    fn key_scheme(&self) -> KeyScheme {
+        KeyScheme::VIM_AND_EMACS
     }
 
     fn theme(&self) -> &Theme {

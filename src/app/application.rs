@@ -11,6 +11,7 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
 
 use super::super::base::appearance::Appearance;
+use super::super::base::key::KeyScheme;
 use super::super::input::event::Input;
 use super::super::platform::clipboard::SystemClipboard;
 use super::super::platform::error::Error;
@@ -177,6 +178,14 @@ pub trait Application: 'static {
     /// ([`HangWatch::on_hang`]), or watch nothing ([`HangWatch::off`]).
     fn hang_watch(&self) -> HangWatch {
         HangWatch::default()
+    }
+
+    /// Which keyboard conventions misty's widgets follow beyond the
+    /// platform's, asked once as the app starts: none by default, so
+    /// lists and text fields behave as the platform's do;
+    /// [`KeyScheme::VIM_AND_EMACS`] for a keyboard-first app.
+    fn key_scheme(&self) -> KeyScheme {
+        KeyScheme::default()
     }
 }
 

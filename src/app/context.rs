@@ -16,7 +16,7 @@ use winit::window::{self, Window};
 
 use super::super::base::cursor::CursorIcon;
 use super::super::base::geometry::{Point, Rect};
-use super::super::base::key::{Mods, PhysicalKey};
+use super::super::base::key::{KeyScheme, Mods, PhysicalKey};
 use super::super::platform::clipboard::SystemClipboard;
 use super::super::platform::error::Error;
 use super::super::platform::resize::ResizeEdge;
@@ -70,6 +70,8 @@ pub(crate) struct WindowState {
     pub(crate) clicks: u8,
     /// Whether the key being handled is a repeat of a key held down.
     pub(crate) key_repeat: bool,
+    /// Which keyboard conventions widgets follow, as the app chose.
+    pub(crate) key_scheme: KeyScheme,
     /// Whether the window is maximized.
     pub(crate) maximized: bool,
     /// The modifier keys held.
@@ -295,6 +297,12 @@ impl<'a> EventCx<'a> {
     /// `None` for a window that is not open.
     pub fn geometry(&self) -> Option<WindowGeometry> {
         self.geometry
+    }
+
+    /// Which keyboard conventions the app's widgets follow beyond the
+    /// platform's ([`Application::key_scheme`](crate::Application::key_scheme)).
+    pub fn key_scheme(&self) -> KeyScheme {
+        self.state.key_scheme
     }
 
     /// Whether to cut animations short: scrolls jump, fades and spinners

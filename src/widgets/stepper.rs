@@ -246,13 +246,15 @@ impl Stepper {
     }
 
     /// Reacts to `key`, while focused and enabled.
-    fn handle_key(&mut self, key: Key) -> StepperResponse {
+    fn handle_key(&mut self, key: Key, vim: bool) -> StepperResponse {
         if key.mods != Mods::NONE {
             return StepperResponse::Ignored;
         }
         match key.code {
-            KeyCode::Up | KeyCode::Char('k') => self.step(1.0),
-            KeyCode::Down | KeyCode::Char('j') => self.step(-1.0),
+            KeyCode::Up => self.step(1.0),
+            KeyCode::Char('k') if vim => self.step(1.0),
+            KeyCode::Down => self.step(-1.0),
+            KeyCode::Char('j') if vim => self.step(-1.0),
             KeyCode::PageUp => self.step(PAGE_STEPS),
             KeyCode::PageDown => self.step(-PAGE_STEPS),
             KeyCode::Home => self.change(self.range.min),
@@ -376,7 +378,7 @@ impl Widget for Stepper {
             return StepperResponse::Ignored;
         }
         let response = match input {
-            Input::Key(key) if self.focused => self.handle_key(*key),
+            Input::Key(key) if self.focused => self.handle_key(*key, cx.key_scheme().vim),
             Input::Key(_) => StepperResponse::Ignored,
             Input::KeyReleased(_)
             | Input::AppearanceChanged(_)
@@ -535,7 +537,7 @@ mod tests {
 
     #[test]
     fn test_keys_step_page_and_jump_only_while_focused_and_stop_at_the_ends() {
-        let mut window = TestWindow::new(300, 40);
+        let mut window = TestWindow::keyboard_first(300, 40);
         let mut stepper = Stepper::new(TAB_WIDTH, 4.0);
         assert_eq!(
             window.feed(&mut stepper, &key("k")),
@@ -572,7 +574,7 @@ mod tests {
 
     #[test]
     fn test_clicks_on_the_buttons_step_and_moves_light_the_button_under_the_pointer() {
-        let mut window = TestWindow::new(300, 40);
+        let mut window = TestWindow::keyboard_first(300, 40);
         let mut stepper = Stepper::new(TAB_WIDTH, 4.0).with_label("Tab width");
         let mut frame = window.frame();
         let bounds = frame.bounds();
@@ -611,7 +613,7 @@ mod tests {
 
     #[test]
     fn test_the_buttons_take_their_names_from_the_theme_last_drawn_in() {
-        let window = TestWindow::new(300, 40);
+        let window = TestWindow::keyboard_first(300, 40);
         let theme = Theme {
             strings: Strings {
                 decrease: "Weniger".into(),
@@ -632,7 +634,7 @@ mod tests {
 
     #[test]
     fn test_the_stepper_describes_its_value_and_buttons_for_a_screen_reader() {
-        let window = TestWindow::new(300, 40);
+        let window = TestWindow::keyboard_first(300, 40);
         let id = FocusId::new("size");
         let mut stepper =
             Stepper::new(NumberRange::new(8.0, 32.0, 0.5), 12.0).with_label("Font size");

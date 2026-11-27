@@ -46,7 +46,7 @@ use super::app::widget::Widget;
 use super::app::window::{Size, WindowGeometry, WindowOptions};
 use super::base::cursor::CursorIcon;
 use super::base::geometry::{Point, Rect};
-use super::base::key::{Key, KeyCode, Mods, PhysicalKey, folded_shift_place};
+use super::base::key::{Key, KeyCode, KeyScheme, Mods, PhysicalKey, folded_shift_place};
 use super::input::event::{Input, InputReader};
 use super::platform::clipboard::SystemClipboard;
 use super::platform::window_id::WindowId;
@@ -111,6 +111,8 @@ pub struct TestWindow {
     input: InputReader,
     /// Whether the keys sent count as repeats of a key held down.
     key_repeat: bool,
+    /// Which keyboard conventions widgets follow.
+    key_scheme: KeyScheme,
     /// Whether the window counts as maximized.
     maximized: bool,
     /// Where the keys sent sit, as [`EventCx::physical_key`] reports.
@@ -137,12 +139,23 @@ impl TestWindow {
             id: WindowId(window::WindowId::from(TEST_WINDOW_ID)),
             input: InputReader::default(),
             key_repeat: false,
+            key_scheme: KeyScheme::STANDARD,
             maximized: false,
             physical_key: None,
             reduced_motion: false,
             requests: Requests::default(),
             width,
         }
+    }
+
+    /// A window as [`TestWindow::new`] makes, its widgets taking the Vim
+    /// and Emacs keys ([`KeyScheme::VIM_AND_EMACS`]), for misty's tests of
+    /// those keys.
+    #[cfg(test)]
+    pub(crate) fn keyboard_first(width: u32, height: u32) -> Self {
+        let mut window = Self::new(width, height);
+        window.key_scheme = KeyScheme::VIM_AND_EMACS;
+        window
     }
 
     /// The window's id, which the contexts it hands out name.
@@ -202,6 +215,13 @@ impl TestWindow {
     /// Counts the window as maximized, or not, from now on.
     pub fn set_maximized(&mut self, maximized: bool) {
         self.maximized = maximized;
+    }
+
+    /// Has widgets follow `key_scheme` from now on, as an app's
+    /// [`Application::key_scheme`](crate::Application::key_scheme) has
+    /// them: [`KeyScheme::STANDARD`] until said otherwise.
+    pub fn set_key_scheme(&mut self, key_scheme: KeyScheme) {
+        self.key_scheme = key_scheme;
     }
 
     /// Has widgets cut their animations short (`true`) from now on, as the
@@ -322,6 +342,7 @@ impl TestWindow {
         WindowState {
             clicks: self.input.click_count(),
             key_repeat: self.key_repeat,
+            key_scheme: self.key_scheme,
             maximized: self.maximized,
             mods: self.input.mods(),
             physical_key: self.physical_key,

@@ -11,6 +11,7 @@ use super::super::app::application::{AppContext, Application};
 use super::super::app::frame::Frame;
 use super::super::app::hang::HangWatch;
 use super::super::app::window::{Size, WindowOptions};
+use super::super::base::key::KeyScheme;
 use super::super::input::event::Input;
 use super::super::platform::error::Error;
 use super::super::platform::window_id::WindowId;
@@ -71,6 +72,10 @@ impl<A: App> Application for TreeRunner<A> {
 
     fn hang_watch(&self) -> HangWatch {
         self.app.hang_watch()
+    }
+
+    fn key_scheme(&self) -> KeyScheme {
+        self.app.key_scheme()
     }
 
     fn on_panic(&mut self, cx: &mut AppContext<'_, Update<A>>, why: &str) {

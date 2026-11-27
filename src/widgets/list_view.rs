@@ -62,7 +62,7 @@ use super::super::base::box_style::BoxStyle;
 use super::super::base::clock;
 use super::super::base::color::Rgba;
 use super::super::base::geometry::{Point, Rect};
-use super::super::base::key::{Key, Mods};
+use super::super::base::key::{Key, KeyScheme, Mods};
 use super::super::base::list::ListState;
 use super::super::base::theme::Theme;
 use super::super::input::click::is_double_click;
@@ -266,6 +266,14 @@ impl<T: AsRef<str>> ListSource for Vec<T> {
 // ========================================================================
 
 impl List {
+    /// This widget taking the Vim and Emacs keys, for misty's tests of
+    /// them.
+    #[cfg(test)]
+    pub(crate) fn with_vim_and_emacs(mut self) -> Self {
+        self.keys.set_scheme(KeyScheme::VIM_AND_EMACS);
+        self
+    }
+
     /// An empty list; it reads the rows from the source it is lent.
     pub fn new() -> Self {
         Self::default()
@@ -324,6 +332,12 @@ impl List {
             Read::Ignored => ListResponse::Ignored,
             Read::Key(CountedKey { count, key }) => self.run_key(key, count),
         }
+    }
+
+    /// Reads keys by `scheme` from now on, as [`List::handle`] does with
+    /// the app's: for a widget built on the list.
+    pub(crate) fn set_key_scheme(&mut self, scheme: KeyScheme) {
+        self.keys.set_scheme(scheme);
     }
 
     /// Reads `key` toward a list key, for a widget built on the list that
@@ -996,6 +1010,7 @@ impl<S: ListSource + ?Sized> Widget for Lent<'_, List, &S> {
     /// focus, drops a pending count or prefix, as in Vim. Asks for a
     /// redraw whenever what is drawn changed.
     fn handle(&mut self, input: &Input, cx: &mut EventCx<'_>) -> ListResponse {
+        self.widget.keys.set_scheme(cx.key_scheme());
         self.widget.handle_input(input, cx)
     }
 
@@ -1217,7 +1232,7 @@ mod tests {
 
     #[test]
     fn test_keys_move_the_cursor_toggle_and_activate_its_row() {
-        let mut list = List::new();
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(10);
         list.state_mut().set_visible(4);
         let mut press = |spec| list.handle_key(parse_key(spec).expect("a key"));
@@ -1235,7 +1250,7 @@ mod tests {
 
     #[test]
     fn test_a_count_or_prefix_waits_handled_and_shows_until_its_motion() {
-        let mut list = List::new();
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(100);
         list.state_mut().set_visible(10);
         let press = |list: &mut List, spec| list.handle_key(parse_key(spec).expect("a key"));
@@ -1250,7 +1265,7 @@ mod tests {
 
     #[test]
     fn test_enter_in_an_empty_list_activates_nothing() {
-        let mut list = List::new();
+        let mut list = List::new().with_vim_and_emacs();
         let enter = parse_key("<cr>").expect("a key");
         assert_eq!(list.handle_key(enter), ListResponse::Handled);
     }
@@ -1271,7 +1286,7 @@ mod tests {
     #[test]
     fn test_the_cursor_row_is_hovered_with_an_accent_bar_and_selected_rows_lit() {
         let theme = Theme::dark().with_grid_look();
-        let mut list = List::new();
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(Rows.row_count());
         list.state_mut().set_cursor(1);
         list.state_mut().toggle_selected(3);
@@ -1301,7 +1316,7 @@ mod tests {
     fn test_a_modern_list_pads_its_rows_and_marks_the_cursor_with_a_pill_beside_its_band() {
         let theme = Theme::dark();
         let shape = theme.shape;
-        let mut list = List::new();
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(Rows.row_count());
         list.state_mut().set_cursor(1);
         list.state_mut().toggle_selected(3);
@@ -1330,7 +1345,7 @@ mod tests {
     #[test]
     fn test_the_list_describes_its_rows_in_sight_and_its_cursor_row_has_focus() {
         let id = FocusId::new("list");
-        let mut list = List::new();
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(5);
         list.state_mut().set_cursor(2);
         list.state_mut().toggle_selected(1);
@@ -1376,6 +1391,7 @@ mod tests {
         let area = Rect::new(0.0, 0.0, 300.0, 200.0);
         let mut frame = offscreen::plain_frame(300, 200);
         List::new()
+            .with_vim_and_emacs()
             .with_proportional_font()
             .lend(&Prose)
             .draw(&mut frame, area, &Theme::dark());
@@ -1390,6 +1406,7 @@ mod tests {
         assert!(wide <= area.width, "{wide} fits the row");
         let mut cells = offscreen::plain_frame(300, 200);
         List::new()
+            .with_vim_and_emacs()
             .lend(&Prose)
             .draw(&mut cells, area, &Theme::dark());
         assert!(cells.draw.text().iter().all(|row| row.wrap.is_none()));
@@ -1414,8 +1431,8 @@ mod tests {
 
     #[test]
     fn test_a_click_moves_the_cursor_ctrl_click_toggles_and_a_double_click_activates() {
-        let mut window = TestWindow::new(400, 300);
-        let mut list = List::new();
+        let mut window = TestWindow::keyboard_first(400, 300);
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(10);
         list.layout = Some(TOP);
         assert_eq!(
@@ -1441,8 +1458,8 @@ mod tests {
 
     #[test]
     fn test_the_wheel_over_the_list_scrolls_three_rows_a_notch_and_elsewhere_nothing() {
-        let mut window = TestWindow::new(400, 400);
-        let mut list = List::new();
+        let mut window = TestWindow::keyboard_first(400, 400);
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(100);
         list.state_mut().set_visible(10);
         list.layout = Some(TOP);
@@ -1473,8 +1490,8 @@ mod tests {
 
     #[test]
     fn test_a_lent_list_takes_keys_and_pointer_through_one_handle() {
-        let mut window = TestWindow::new(400, 300);
-        let mut list = List::new();
+        let mut window = TestWindow::keyboard_first(400, 300);
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(Rows.row_count());
         list.layout = Some(TOP);
         let j = Input::Key(parse_key("j").expect("a key"));
@@ -1496,8 +1513,8 @@ mod tests {
 
     #[test]
     fn test_a_right_press_moves_the_cursor_to_its_row_and_keeps_the_selection() {
-        let mut window = TestWindow::new(400, 300);
-        let mut list = List::new();
+        let mut window = TestWindow::keyboard_first(400, 300);
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(Rows.row_count());
         list.state_mut().set_selected([1]);
         list.layout = Some(TOP);
@@ -1520,8 +1537,8 @@ mod tests {
 
     #[test]
     fn test_shift_click_selects_from_the_row_last_clicked_on_top_of_the_selection() {
-        let mut window = TestWindow::new(400, 300);
-        let mut list = List::new();
+        let mut window = TestWindow::keyboard_first(400, 300);
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(10);
         list.layout = Some(TOP);
         click(&mut window, &mut list, 10.0, 105.0, Mods::CTRL);
@@ -1541,7 +1558,7 @@ mod tests {
 
     #[test]
     fn test_shift_arrows_extend_from_the_cursor_and_a_plain_move_starts_afresh() {
-        let mut list = List::new();
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(20);
         list.state_mut().set_visible(10);
         let mut press = |spec| list.handle_key(parse_key(spec).expect("a key"));
@@ -1560,8 +1577,8 @@ mod tests {
 
     #[test]
     fn test_a_band_from_empty_space_selects_the_rows_it_touches() {
-        let mut window = TestWindow::new(400, 400);
-        let mut list = List::new();
+        let mut window = TestWindow::keyboard_first(400, 400);
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(5);
         list.state_mut().toggle_selected(0);
         list.layout = Some(TOP);
@@ -1600,8 +1617,8 @@ mod tests {
 
     #[test]
     fn test_alt_starts_a_band_on_a_row_and_ctrl_keeps_the_selection_under_it() {
-        let mut window = TestWindow::new(400, 400);
-        let mut list = List::new();
+        let mut window = TestWindow::keyboard_first(400, 400);
+        let mut list = List::new().with_vim_and_emacs();
         list.state_mut().set_count(10);
         list.state_mut().toggle_selected(9);
         list.layout = Some(TOP);
@@ -1617,8 +1634,8 @@ mod tests {
 
     #[test]
     fn test_a_band_held_at_the_bottom_edge_scrolls_a_row_each_interval() {
-        let mut window = TestWindow::new(400, 400);
-        let mut list = List::new();
+        let mut window = TestWindow::keyboard_first(400, 400);
+        let mut list = List::new().with_vim_and_emacs();
         let theme = Theme::dark().with_grid_look();
         let mut frame = offscreen::plain_frame(400, 400);
         let height = frame.cell_metrics().height;
@@ -1684,7 +1701,7 @@ mod tests {
 
     #[test]
     fn test_row_rect_and_the_visible_range_follow_the_scroll() {
-        let mut list = List::new();
+        let mut list = List::new().with_vim_and_emacs();
         let theme = Theme::dark().with_grid_look();
         let mut frame = offscreen::plain_frame(400, 400);
         let height = frame.cell_metrics().height;
@@ -1698,7 +1715,11 @@ mod tests {
         assert!(range.contains(&500));
         let rect = list.row_rect(range.start).expect("drawn");
         assert_eq!((rect.y, rect.height), (50.0, height));
-        assert_eq!(List::new().visible_range(), 0..0, "nothing before a frame");
+        assert_eq!(
+            List::new().with_vim_and_emacs().visible_range(),
+            0..0,
+            "nothing before a frame"
+        );
     }
 
     /// One row with an icon-less name cut short and two badges.
@@ -1725,7 +1746,7 @@ mod tests {
 
     #[test]
     fn test_badges_keep_their_place_at_the_end_and_the_text_is_cut_before_them() {
-        let mut list = List::new();
+        let mut list = List::new().with_vim_and_emacs();
         let mut frame = offscreen::plain_frame(400, 400);
         let width = frame.cell_metrics().width;
         let area = Rect::new(0.0, 0.0, (width * 20.0).round(), 100.0);

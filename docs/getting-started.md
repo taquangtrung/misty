@@ -91,7 +91,7 @@ list(&self.notes, self.cursor)
     .into(),
 ```
 
-The list brings its own keys, as a keyboard-first app expects: Up and Down or `j` and `k`, Page Up and Page Down, Home and End, and a count before a motion (`5j`). It draws only the rows on screen, so it is as fast with a hundred thousand rows as with ten. For rows of your own type, implement `ListSource` (`row_count` and `row_text`).
+The list brings its own keys: Up and Down, Page Up and Page Down, Home and End, Space to select, and Enter. A keyboard-first app can add the Vim and Emacs keys (`j` and `k`, `gg` and `G`, a count before a motion as in `5j`, `C-n` and `C-p`, and the readline keys in text fields) by returning `KeyScheme::VIM_AND_EMACS` from `App::key_scheme`. It draws only the rows on screen, so it is as fast with a hundred thousand rows as with ten. For rows of your own type, implement `ListSource` (`row_count` and `row_text`).
 
 ## 5. Buttons
 

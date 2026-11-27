@@ -97,7 +97,8 @@ impl<A: Application> TestApp<A> {
     /// [`AppContext::open_window`] refuses with
     /// [`Error::Headless`](crate::Error::Headless).
     pub fn new(app: A, title: &str, width: u32, height: u32) -> Self {
-        let window = TestWindow::new(width, height);
+        let mut window = TestWindow::new(width, height);
+        window.set_key_scheme(app.key_scheme());
         let frame = window.frame();
         let (waker, inbox) = Waker::channel();
         let mut test = Self {

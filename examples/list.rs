@@ -24,8 +24,8 @@ use std::env;
 
 use misty::view::{column, list, text};
 use misty::{
-    App, AppCx, Element, Key, KeyCode, ListKeys, ListSource, Mods, RowDrop, Theme, WindowId,
-    WindowOptions, key_label,
+    App, AppCx, Element, Key, KeyCode, KeyScheme, ListKeys, ListSource, Mods, RowDrop, Theme,
+    WindowId, WindowOptions, key_label,
 };
 
 // ========================================================================
@@ -180,6 +180,11 @@ impl App for ListDemo {
 
     fn reduced_motion(&self) -> Option<bool> {
         self.reduced_motion.then_some(true)
+    }
+
+    /// The Vim and Emacs keys, as a keyboard-first app takes them.
+    fn key_scheme(&self) -> KeyScheme {
+        KeyScheme::VIM_AND_EMACS
     }
 
     fn theme(&self) -> &Theme {

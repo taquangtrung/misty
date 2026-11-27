@@ -396,19 +396,26 @@ impl TextField {
     /// clipboard and writing a new selection to its primary selection.
     /// Hand it the keys of the window while the field is focused.
     pub(crate) fn handle_key(&mut self, key: Key, cx: &mut EventCx<'_>) -> TextFieldResponse {
+        let emacs = cx.key_scheme().emacs;
         let clipboard = cx.clipboard();
-        let response = self.edit_by_key(key, clipboard);
+        let response = self.edit_by_key(key, emacs, clipboard);
         self.publish_primary(clipboard);
         response
     }
 
     /// Carries out `key` as [`TextField::handle_key`] does, but for the
-    /// primary selection.
-    fn edit_by_key(&mut self, key: Key, clipboard: &mut SystemClipboard) -> TextFieldResponse {
+    /// primary selection, taking the Emacs keys where `emacs`.
+    fn edit_by_key(
+        &mut self,
+        key: Key,
+        emacs: bool,
+        clipboard: &mut SystemClipboard,
+    ) -> TextFieldResponse {
         if self.masked && is_copy_or_cut(key) {
             return TextFieldResponse::Handled;
         }
-        edit_by_key(&mut self.line, key, clipboard).map_or(TextFieldResponse::Ignored, response_of)
+        edit_by_key(&mut self.line, key, emacs, clipboard)
+            .map_or(TextFieldResponse::Ignored, response_of)
     }
 
     /// Reacts to an input method event: text being composed is shown
@@ -1063,11 +1070,13 @@ impl ShownLine {
 // ========================================================================
 
 /// Carries out `key` on `line` as every text field does (typing, deleting,
-/// the motions along a line, the Emacs keys, copy, cut, paste, undo, and
-/// redo through `clipboard`), or `None` when it is no such key.
+/// the motions along a line, copy, cut, paste, undo, and redo through
+/// `clipboard`, and the Emacs keys where `emacs`), or `None` when it is no
+/// such key.
 pub(super) fn edit_by_key(
     line: &mut LineEdit,
     key: Key,
+    emacs: bool,
     clipboard: &mut SystemClipboard,
 ) -> Option<Edit> {
     let mods = key.mods;
@@ -1075,26 +1084,29 @@ pub(super) fn edit_by_key(
     let shift = mods == Mods::SHIFT;
     let ctrl = mods == Mods::CTRL;
     let alt = mods == Mods::ALT;
+    // The Emacs keys only for an app that takes them.
+    let emacs_ctrl = emacs && ctrl;
+    let emacs_alt = emacs && alt;
     let primary = mods == Mods::PRIMARY;
     let edit = match key.code {
         KeyCode::Char(c) if plain => line.type_char(c),
         // The Emacs keys first: on Linux and Windows the primary
-        // modifier is Ctrl, and these win.
-        KeyCode::Char('a') if ctrl => line.move_to(0, false),
-        KeyCode::Char('b') if ctrl => line.move_left(false),
-        KeyCode::Char('d') if ctrl => line.delete_forward(),
-        KeyCode::Char('e') if ctrl => line.move_to(line.text().len(), false),
-        KeyCode::Char('f') if ctrl => line.move_right(false),
-        KeyCode::Char('h') if ctrl => line.delete_backward(),
-        KeyCode::Char('k') if ctrl => line.kill_to_end(),
-        KeyCode::Char('t') if ctrl => line.transpose_chars(),
-        KeyCode::Char('u') if ctrl => line.kill_to_start(),
-        KeyCode::Char('w') if ctrl => line.kill_word_backward(),
-        KeyCode::Char('y') if ctrl => line.yank(),
-        KeyCode::Char('b') if alt => line.move_word_left(false),
-        KeyCode::Char('d') if alt => line.kill_word_forward(),
-        KeyCode::Char('f') if alt => line.move_word_right(false),
-        KeyCode::Char('y') if alt => line.yank_pop(),
+        // modifier is Ctrl, and these win where the app takes them.
+        KeyCode::Char('a') if emacs_ctrl => line.move_to(0, false),
+        KeyCode::Char('b') if emacs_ctrl => line.move_left(false),
+        KeyCode::Char('d') if emacs_ctrl => line.delete_forward(),
+        KeyCode::Char('e') if emacs_ctrl => line.move_to(line.text().len(), false),
+        KeyCode::Char('f') if emacs_ctrl => line.move_right(false),
+        KeyCode::Char('h') if emacs_ctrl => line.delete_backward(),
+        KeyCode::Char('k') if emacs_ctrl => line.kill_to_end(),
+        KeyCode::Char('t') if emacs_ctrl => line.transpose_chars(),
+        KeyCode::Char('u') if emacs_ctrl => line.kill_to_start(),
+        KeyCode::Char('w') if emacs_ctrl => line.kill_word_backward(),
+        KeyCode::Char('y') if emacs_ctrl => line.yank(),
+        KeyCode::Char('b') if emacs_alt => line.move_word_left(false),
+        KeyCode::Char('d') if emacs_alt => line.kill_word_forward(),
+        KeyCode::Char('f') if emacs_alt => line.move_word_right(false),
+        KeyCode::Char('y') if emacs_alt => line.yank_pop(),
         KeyCode::Char('a') if primary => line.select_all(),
         KeyCode::Char('c') if primary => copy(line, clipboard),
         KeyCode::Char('v') if primary => paste(line, clipboard),
@@ -1338,7 +1350,7 @@ mod tests {
 
     #[test]
     fn test_shift_selects_and_copy_cut_and_paste_go_through_the_clipboard() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut field = TextField::with_text("report.txt");
         keys(
             &mut field,
@@ -1365,7 +1377,7 @@ mod tests {
 
     #[test]
     fn test_a_new_selection_goes_to_the_primary_selection_and_stays_after_it_is_dropped() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut field = TextField::with_text("report.txt");
         keys(
             &mut field,
@@ -1409,7 +1421,7 @@ mod tests {
 
     #[test]
     fn test_a_middle_click_pastes_the_primary_selection_where_it_lands() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         window
             .clipboard()
             .write_text(ClipboardKind::Primary, "big ")
@@ -1430,7 +1442,7 @@ mod tests {
 
     #[test]
     fn test_the_emacs_keys_stay_text_keys_and_the_rest_are_left_to_the_app() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut field = TextField::with_text("one two");
         assert_eq!(
             keys(&mut field, &mut window, &["C-w"]),
@@ -1453,7 +1465,7 @@ mod tests {
 
     #[test]
     fn test_transpose_and_yank_pop_keys_edit_and_the_caret_reads_back() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut field = TextField::with_text("one two");
         keys(&mut field, &mut window, &["C-w", "C-a", "M-d", "C-y"]);
         assert_eq!(field.text(), "one ");
@@ -1632,7 +1644,7 @@ mod tests {
 
     #[test]
     fn test_a_drag_over_the_field_selects_under_a_text_beam_and_fills_the_primary_selection() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut field = drawn("report.txt");
         let mut send = |input: Input, field: &mut TextField| {
             window.send(&input, |input, cx| field.handle(input, cx))
@@ -1662,7 +1674,7 @@ mod tests {
 
     #[test]
     fn test_one_handle_types_keys_and_committed_input_method_text() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut field = TextField::new();
         let key = |spec| Input::Key(parse_key(spec).expect("a valid key"));
         assert_eq!(
@@ -1732,7 +1744,7 @@ mod tests {
 
     #[test]
     fn test_a_proportional_press_lands_between_the_glyphs_under_it_not_on_cells() {
-        let mut window = TestWindow::new(400, 60);
+        let mut window = TestWindow::keyboard_first(400, 60);
         let mut field = TextField::with_text("iiiiWWWW").with_proportional_font();
         let frame = draw_in(&mut field, &window, 400.0);
         let cell = frame.cell_metrics().width;
@@ -1753,7 +1765,7 @@ mod tests {
 
     #[test]
     fn test_typing_past_a_proportional_field_s_width_keeps_the_caret_in_sight() {
-        let mut window = TestWindow::new(400, 60);
+        let mut window = TestWindow::keyboard_first(400, 60);
         let mut field = TextField::new().with_proportional_font();
         let width = 80.0;
         let key = |spec| Input::Key(parse_key(spec).expect("a valid key"));
@@ -1775,7 +1787,7 @@ mod tests {
 
     #[test]
     fn test_a_proportional_selection_fills_behind_its_glyphs_inside_the_field() {
-        let window = TestWindow::new(400, 60);
+        let window = TestWindow::keyboard_first(400, 60);
         let theme = Theme::dark();
         let mut field = TextField::with_text("hello world").with_proportional_font();
         field.select(2..5);
@@ -1804,7 +1816,7 @@ mod tests {
 
     #[test]
     fn test_a_proportional_composition_shows_inline_with_the_input_method_at_its_caret() {
-        let mut window = TestWindow::new(400, 60);
+        let mut window = TestWindow::keyboard_first(400, 60);
         let mut field = TextField::with_text("abcd").with_proportional_font();
         field.select(2..2);
         field.handle_ime(&ImeInput::Preedit(Composition {
@@ -1842,7 +1854,7 @@ mod tests {
 
     #[test]
     fn test_proportional_right_to_left_text_and_a_placeholder_show_inside_the_field() {
-        let window = TestWindow::new(400, 60);
+        let window = TestWindow::keyboard_first(400, 60);
         let mut field = TextField::with_text("שלום עולם").with_proportional_font();
         draw_in(&mut field, &window, 200.0);
         let caret = field.cursor_area().expect("drawn").x;
@@ -1882,7 +1894,7 @@ mod tests {
 
     #[test]
     fn test_a_masked_field_shows_dots_copies_nothing_and_is_a_password_to_screen_readers() {
-        let mut window = TestWindow::new(400, 300);
+        let mut window = TestWindow::keyboard_first(400, 300);
         let mut field = TextField::with_text("sé cret").with_mask();
         keys(&mut field, &mut window, &["S-<home>"]);
         for chord in [

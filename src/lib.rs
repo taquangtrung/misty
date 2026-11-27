@@ -185,7 +185,8 @@ pub use base::fuzzy::{
 };
 pub use base::geometry::{Point, Rect};
 pub use base::key::{
-    Key, KeyCode, KeyParseError, Mods, PhysicalKey, key_label, parse_key, parse_key_sequence,
+    Key, KeyCode, KeyParseError, KeyScheme, Mods, PhysicalKey, key_label, parse_key,
+    parse_key_sequence,
 };
 pub use base::list::ListState;
 pub use base::motion::{Animator, Blink, Easing, HoverFade, Lerp, Motion, Repeat, Tween};

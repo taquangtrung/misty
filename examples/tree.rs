@@ -27,8 +27,8 @@ use std::time::Duration;
 
 use misty::view::{column, text, tree_view};
 use misty::{
-    App, AppCx, Element, Key, KeyCode, ListKeys, Mods, Theme, ThemeToken, TreeItem, TreeItems,
-    Update, Waker, WindowId, WindowOptions, key_label,
+    App, AppCx, Element, Key, KeyCode, KeyScheme, ListKeys, Mods, Theme, ThemeToken, TreeItem,
+    TreeItems, Update, Waker, WindowId, WindowOptions, key_label,
 };
 
 // ========================================================================
@@ -192,6 +192,11 @@ impl App for TreeDemo {
             _ => return false,
         }
         true
+    }
+
+    /// The Vim and Emacs keys, as a keyboard-first app takes them.
+    fn key_scheme(&self) -> KeyScheme {
+        KeyScheme::VIM_AND_EMACS
     }
 
     fn theme(&self) -> &Theme {
