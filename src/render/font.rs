@@ -73,6 +73,9 @@ pub struct Font {
 /// desktop sets it ([`UiFont::desktop`]), in regular and bold weights.
 #[derive(Clone, Debug, PartialEq)]
 pub struct UiFont {
+    /// Its lines' height as a multiple of its size, or `None` for the
+    /// window font's line scaled to its size.
+    line_height: Option<f32>,
     /// The size in logical pixels.
     size: f32,
     /// The weights its regular and bold text are drawn in.
@@ -233,9 +236,29 @@ impl UiFont {
     /// outside 6 to 72 are drawn at the nearer bound.
     pub fn new(size: f32) -> Self {
         Self {
+            line_height: None,
             size,
             weights: FaceWeights::default(),
         }
+    }
+
+    /// This font with lines `ratio` times its size high, for an interface
+    /// with lines of its own height; ratios below 1 or not a number keep
+    /// the default, the window font's line scaled to this font's size, so
+    /// a smaller interface font takes shorter lines and an equal one lines
+    /// exactly a cell tall.
+    pub fn with_line_height(self, ratio: f32) -> Self {
+        let line_height = (ratio.is_finite() && ratio >= 1.0).then_some(ratio);
+        Self {
+            line_height,
+            ..self
+        }
+    }
+
+    /// Its lines' height as a multiple of its size, or `None` for the
+    /// window font's line scaled to its size.
+    pub(crate) fn line_height(&self) -> Option<f32> {
+        self.line_height
     }
 
     /// The desktop's interface font at the size the desktop sets its own

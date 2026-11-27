@@ -417,6 +417,9 @@ struct Room {
     padding: ThemePadding,
     /// The frame's scale factor.
     scale: f64,
+    /// How tall a line of proportional text is
+    /// ([`Frame::ui_line_height`]).
+    ui_line: f32,
 }
 
 /// The right padding of a container that lets scrollbars run in it
@@ -492,6 +495,7 @@ impl Store {
                 row_padding: theme.shape.row_padding,
             },
             scale: frame.scale_factor(),
+            ui_line: frame.ui_line_height(),
         };
         self.metrics = Some(room.metrics);
         self.named.clear();
@@ -1656,7 +1660,12 @@ impl Store {
                         cells as f32 * metrics.width
                     }
                 };
-                let style = Style::new().with_height(Length::Fixed(metrics.height));
+                // Proportional text is a line of the UI font tall.
+                let height = match text.proportional {
+                    true => room.ui_line,
+                    false => metrics.height,
+                };
+                let style = Style::new().with_height(Length::Fixed(height));
                 let style = match place {
                     Place::Row => style.with_width(Length::Fixed(width)),
                     Place::Column | Place::Content | Place::Root => style,

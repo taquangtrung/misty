@@ -970,12 +970,18 @@ impl<K: Clone + Eq + Hash> Widget for TreeView<K> {
         let scale_factor = frame.scale_factor();
         let row_padding =
             (f32::from(theme.shape.row_padding) * ROW_PADDING_SCALE * scale_factor as f32).round();
+        // A proportional row is a line of the UI font tall, a grid row a
+        // cell.
+        let line = match self.font {
+            RowFont::Proportional => frame.ui_line_height(),
+            RowFont::Cells => metrics.height,
+        };
         let rows = RowsToDraw {
             area,
             count: self.rows.len(),
             now: clock::now(),
             pinned: 0,
-            row_height: metrics.height + 2.0 * row_padding,
+            row_height: line + 2.0 * row_padding,
         };
         let (shown, expanded, font) = (&self.rows, &self.expanded, self.font);
         let draw_row = |frame: &mut Frame, index: usize, rect: Rect| {

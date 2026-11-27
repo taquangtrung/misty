@@ -1229,7 +1229,13 @@ impl Table {
         let scale_factor = frame.scale_factor();
         let row_padding =
             (f32::from(theme.shape.row_padding) * scale_factor as f32 * self.zoom()).round();
-        let row_height = metrics.height + 2.0 * row_padding;
+        // A proportional row is a line of the UI font tall, a grid row a
+        // cell.
+        let line = match self.font {
+            RowFont::Proportional => frame.ui_line_height(),
+            RowFont::Cells => metrics.height,
+        };
+        let row_height = line + 2.0 * row_padding;
         let count = source.row_count();
         let whole_rows = match row_height > 0.0 {
             true => (rows.height / row_height).floor() as usize,

@@ -76,6 +76,9 @@ pub struct Frame {
     font_size: f32,
     /// The fonts every window shares, for measuring paragraphs.
     fonts: Arc<Mutex<Fonts>>,
+    /// The height of proportional text's lines as a multiple of its size,
+    /// or `None` for the cell's height scaled by `ui_ratio`.
+    ui_line_ratio: Option<f32>,
     /// The size of proportional text as a share of the window font's.
     ui_ratio: f32,
     /// The weights of proportional text's regular and bold runs.
@@ -138,6 +141,7 @@ impl Frame {
             corner_radius: 0.0,
             draw: DrawList::default(),
             font_size,
+            ui_line_ratio: None,
             ui_ratio: 1.0,
             ui_weights: font_weights,
             fonts,
@@ -563,23 +567,37 @@ impl Frame {
     /// size, line height, and weights.
     pub(crate) fn paragraph_font(&self) -> ParagraphFont {
         ParagraphFont {
-            line_height: self.metrics.height,
+            line_height: self.ui_line_height(),
             scale_factor: self.scale_factor as f32,
             size: self.ui_font_size(),
             weights: self.ui_weights,
         }
     }
 
-    /// Sets proportional text `size` physical pixels high, at `weights`:
-    /// the window's [`UiFont`](crate::UiFont). Kept as a share of the
-    /// window font's size, so [`Frame::with_font`] and a scaled view scale
-    /// proportional text with their cells.
-    pub(crate) fn set_ui_font(&mut self, size: f32, weights: FaceWeights) {
+    /// Sets proportional text `size` physical pixels high, at `weights`,
+    /// in lines `line_ratio` times its size (`None` for the cell's height
+    /// scaled as the size is): the window's [`UiFont`](crate::UiFont).
+    /// Kept as a share of the window font's size, so [`Frame::with_font`]
+    /// and a scaled view scale proportional text with their cells.
+    pub(crate) fn set_ui_font(&mut self, size: f32, weights: FaceWeights, line_ratio: Option<f32>) {
         self.ui_ratio = match self.font_size > 0.0 {
             true => size / self.font_size,
             false => 1.0,
         };
         self.ui_weights = weights;
+        self.ui_line_ratio = line_ratio;
+    }
+
+    /// How tall a line of proportional text is here, in whole physical
+    /// pixels: its [`UiFont`](crate::UiFont)'s line, which is a cell's
+    /// height while the interface font is the window font's size. A label,
+    /// a page's text, and a proportional list's row are a line tall.
+    pub fn ui_line_height(&self) -> f32 {
+        let line = match self.ui_line_ratio {
+            Some(ratio) => self.ui_font_size() * ratio,
+            None => self.metrics.height * self.ui_ratio,
+        };
+        line.round().max(1.0)
     }
 
     /// The size proportional text is drawn at here, in physical pixels.
@@ -994,7 +1012,7 @@ mod tests {
         let label = Paragraph::plain("Status", TextColor::Token(ThemeToken::Foreground));
         let (cell, width) = (frame.cell_metrics(), frame.paragraph_width(&label));
         let size = frame.font_size;
-        frame.set_ui_font(size * 0.5, FaceWeights::DEFAULT);
+        frame.set_ui_font(size * 0.5, FaceWeights::DEFAULT, None);
         let half = frame.paragraph_width(&label);
         assert!(half < width * 0.6, "{half} against {width}");
         assert_eq!(frame.cell_metrics(), cell, "the cells keep the window font");
@@ -1004,6 +1022,26 @@ mod tests {
         let mut inside = 0.0;
         frame.with_font(&small, |frame| inside = frame.paragraph_width(&label));
         assert!(inside < half, "{inside} against {half}");
+    }
+
+    #[test]
+    fn test_a_ui_line_is_a_cell_until_the_ui_font_differs_or_sets_its_own() {
+        let mut frame = offscreen::plain_frame(400, 200);
+        let cell = frame.cell_metrics().height;
+        assert_eq!(frame.ui_line_height(), cell, "the same size, a cell tall");
+        let size = frame.font_size;
+        frame.set_ui_font(size * 0.5, FaceWeights::DEFAULT, None);
+        assert_eq!(
+            frame.ui_line_height(),
+            (cell * 0.5).round(),
+            "half the size, half a cell"
+        );
+        frame.set_ui_font(size * 0.5, FaceWeights::DEFAULT, Some(2.0));
+        assert_eq!(
+            frame.ui_line_height(),
+            size.round(),
+            "its own ratio of its size"
+        );
     }
 
     #[test]

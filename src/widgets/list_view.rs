@@ -282,9 +282,9 @@ impl List {
     /// This list with its rows' text, icons' gaps, and badges laid out in
     /// the proportional font, each character as wide as its shape, for
     /// rows of prose (a dictionary's headwords, search results with
-    /// snippets) rather than columns to line up. Rows stay a cell tall,
-    /// so the keys, the pointer, and [`List::row_rect`] work as on the
-    /// cell grid.
+    /// snippets) rather than columns to line up. Rows are a line of the
+    /// UI font tall ([`Frame::ui_line_height`]), a cell while the
+    /// interface font is the window font's size.
     pub fn with_proportional_font(self) -> Self {
         Self {
             font: RowFont::Proportional,
@@ -582,13 +582,19 @@ impl List {
         let padding = metrics.width.round() + inset;
         let row_padding = (f32::from(shape.row_padding) * scale_factor).round();
         let font = self.font;
+        // A proportional row is a line of the UI font tall, a grid row a
+        // cell.
+        let line = match font {
+            RowFont::Proportional => frame.ui_line_height(),
+            RowFont::Cells => metrics.height,
+        };
         let draw_row = |frame: &mut Frame, row: usize, rect: Rect| {
             let content = source.row_content(row);
             let inner = Rect::new(
                 rect.x + padding,
                 rect.y + row_padding,
                 (rect.width - 2.0 * padding).max(0.0),
-                metrics.height,
+                line,
             );
             draw_content_in(frame, &content, inner, TextAlign::Start, theme, font);
         };
@@ -597,7 +603,7 @@ impl List {
             count: source.row_count(),
             now,
             pinned: 0,
-            row_height: metrics.height + 2.0 * row_padding,
+            row_height: line + 2.0 * row_padding,
         };
         self.draw_rows(frame, rows, theme, draw_row, |row| source.row_text(row));
     }

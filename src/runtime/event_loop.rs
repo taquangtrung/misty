@@ -398,6 +398,7 @@ impl<A: Application> Runtime<A> {
         frame.set_ui_font(
             open.ui_font.physical_size(scale_factor),
             open.ui_font.weights(),
+            open.ui_font.line_height(),
         );
         frame.set_maximized(open.maximized);
         // Rounded only while its edges float on the desktop, and only where
