@@ -24,7 +24,7 @@ dbg_macro = "warn"
 todo = "warn"
 
 [features]
-default = ["highlight"]
+default = []
 dialogs = ["dep:rfd"]
 files = []
 global-hotkey = ["dep:global-hotkey"]
