@@ -126,6 +126,10 @@ pub struct Theme {
     pub cursor: Rgb,
     /// The background of the line the cursor is on, in an editor.
     pub cursor_line: Rgb,
+    /// The color data is drawn in: a meter's fill, a chart's bars, a history
+    /// line. Apart from [`Theme::accent`], which marks what is active, so a
+    /// reading never looks selected.
+    pub data: Rgb,
     /// The background of a control that destroys something, such as a
     /// window's close button, while the pointer is over it.
     pub danger: Rgb,
@@ -211,6 +215,8 @@ pub enum ThemeToken {
     CursorLine,
     /// [`Theme::danger`].
     Danger,
+    /// [`Theme::data`].
+    Data,
     /// [`Theme::foreground`].
     Foreground,
     /// [`Theme::hover`].
@@ -323,6 +329,7 @@ impl Theme {
             cursor: DARK_CURSOR,
             cursor_line: Rgb::new(0x2a, 0x2b, 0x3c),
             danger: Rgb::new(0xd2, 0x0f, 0x39),
+            data: Rgb::new(0xa6, 0xe3, 0xa1),
             emphasis: Emphasis::Bold,
             foreground: DARK_FOREGROUND,
             hover: Rgb::new(0x31, 0x32, 0x44),
@@ -359,6 +366,7 @@ impl Theme {
             cursor: LIGHT_CURSOR,
             cursor_line: Rgb::new(0xe6, 0xe9, 0xef),
             danger: Rgb::new(0xd2, 0x0f, 0x39),
+            data: Rgb::new(0x40, 0xa0, 0x2b),
             emphasis: Emphasis::Bold,
             foreground: LIGHT_FOREGROUND,
             hover: Rgb::new(0xcc, 0xd0, 0xda),
@@ -403,6 +411,7 @@ impl Theme {
             ThemeToken::Cursor => self.cursor,
             ThemeToken::CursorLine => self.cursor_line,
             ThemeToken::Danger => self.danger,
+            ThemeToken::Data => self.data,
             ThemeToken::Foreground => self.foreground,
             ThemeToken::Hover => self.hover,
             ThemeToken::MatchText => self.match_text,

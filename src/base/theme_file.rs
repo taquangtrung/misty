@@ -507,6 +507,7 @@ fn scalar_slot<'a>(theme: &'a mut Theme, name: &str) -> Option<&'a mut Rgb> {
         "cursor" => Some(&mut theme.cursor),
         "cursor-line" => Some(&mut theme.cursor_line),
         "danger" => Some(&mut theme.danger),
+        "data" => Some(&mut theme.data),
         "foreground" => Some(&mut theme.foreground),
         "hover" => Some(&mut theme.hover),
         "match-text" => Some(&mut theme.match_text),
