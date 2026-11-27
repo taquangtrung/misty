@@ -220,7 +220,7 @@ pub use base::list::ListState;
 pub use base::motion::{Animator, Blink, Easing, HoverFade, Lerp, Motion, Repeat, Tween};
 pub use base::notice::{
     LoggedNotice, Notice, NoticeAction, NoticeLog, Notifier, Progress, ProgressId, Routing,
-    Severity, Task, Toast, ToastId, ToastStack,
+    Severity, Task, Toast, ToastDurations, ToastId, ToastStack,
 };
 pub use base::paint::{GradientStop, LineCap, LineJoin, LinearGradient, Paint, Stroke};
 pub use base::path::{FillRule, VectorPath, VectorPathBuilder};

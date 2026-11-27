@@ -91,7 +91,8 @@ const RADIO_GLYPH: &str = "\u{2022}";
 const SUBMENU_GLYPH: &str = "\u{203a}";
 
 /// How long the pointer rests on an item before its submenu opens, or
-/// before an open submenu closes for another item.
+/// before an open submenu closes for another item, unless
+/// [`Menu::with_submenu_delay`] says otherwise.
 const SUBMENU_DELAY: Duration = Duration::from_millis(300);
 
 /// The child index, under a submenu item's node, of its submenu's node.
@@ -131,6 +132,9 @@ pub struct Menu<I> {
     scroll: f32,
     /// The open submenu, if any.
     submenu: Option<Box<Submenu<I>>>,
+    /// How long the pointer rests on an item before its submenu opens, or
+    /// before an open submenu closes for another item.
+    submenu_delay: Duration,
 }
 
 /// A submenu to switch to once the pointer has rested on an entry.
@@ -256,6 +260,16 @@ impl<I: Copy> Menu<I> {
             reveal: false,
             scroll: 0.0,
             submenu: None,
+            submenu_delay: SUBMENU_DELAY,
+        }
+    }
+
+    /// This menu opening an item's submenu once the pointer rests on it
+    /// for `delay` (300 milliseconds by default), and its submenus alike.
+    pub fn with_submenu_delay(self, delay: Duration) -> Self {
+        Self {
+            submenu_delay: delay,
+            ..self
         }
     }
 
@@ -409,7 +423,7 @@ impl<I: Copy> Menu<I> {
         {
             return true;
         }
-        let mut menu = Menu::new(entries.clone());
+        let mut menu = Menu::new(entries.clone()).with_submenu_delay(self.submenu_delay);
         let anchor = self.submenu_anchor(index).unwrap_or_default();
         menu.open(anchor, PopupSide::Right);
         menu.pointer = self.pointer;
@@ -491,7 +505,7 @@ impl<I: Copy> Menu<I> {
         let switches = open != Some(index) && (open.is_some() || self.has_submenu(index));
         match switches {
             true if self.hover_switch.map(|switch| switch.entry) != Some(index) => {
-                let at = now + SUBMENU_DELAY;
+                let at = now + self.submenu_delay;
                 self.hover_switch = Some(HoverSwitch { at, entry: index });
                 cx.request_redraw_at(at);
             }
@@ -1633,6 +1647,19 @@ mod tests {
         assert!(menu.submenu.is_some(), "kept open while the pointer passes");
         menu.settle_hover(Instant::now() + SUBMENU_DELAY);
         assert!(menu.submenu.is_none(), "closed for the other item");
+    }
+
+    #[test]
+    fn test_a_menus_own_submenu_delay_holds_the_submenu_back_until_it_passes() {
+        let (mut window, menu) = drawn_nested(Rect::new(10.0, 0.0, 30.0, 30.0));
+        let mut menu = menu.with_submenu_delay(Duration::from_secs(2));
+        let rows = menu.layout.as_ref().expect("drawn").rows.clone();
+        let middle = Point::new(rows[0].x + 5.0, rows[0].y + rows[0].height / 2.0);
+        window.feed(&mut menu, &Input::PointerMoved(middle));
+        menu.settle_hover(Instant::now() + SUBMENU_DELAY);
+        assert!(menu.submenu.is_none(), "not after the default delay");
+        menu.settle_hover(Instant::now() + Duration::from_secs(2));
+        assert!(menu.submenu.is_some(), "open after its own");
     }
 
     #[test]

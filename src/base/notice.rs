@@ -150,9 +150,28 @@ pub struct Toast {
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ToastId(u64);
 
+/// How long a toast of each severity is shown: a few seconds by default,
+/// the more it matters the longer ([`Severity::duration`]); an app sets
+/// its own with [`Notifier::set_toast_durations`].
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct ToastDurations {
+    /// An error's, the longest by default, since it is the one that
+    /// matters.
+    pub error: Duration,
+    /// A confirmation's.
+    pub info: Duration,
+    /// A refusal's, a little longer than a confirmation's by default,
+    /// since it says why a key did nothing.
+    pub refusal: Duration,
+    /// A warning's, long enough to be read in full.
+    pub warning: Duration,
+}
+
 /// The toasts on screen, newest first.
 #[derive(Debug, Default)]
 pub struct ToastStack {
+    /// How long a toast of each severity is shown.
+    durations: ToastDurations,
     /// The toast the pointer rests on, which does not expire while it does.
     held: Option<ToastId>,
     /// The number the next toast's id takes.
@@ -231,7 +250,8 @@ pub struct Notifier {
 // ========================================================================
 
 impl Severity {
-    /// How long a toast of this severity is shown.
+    /// How long a toast of this severity is shown unless the app said
+    /// otherwise ([`ToastDurations`]).
     pub fn duration(self) -> Duration {
         match self {
             Severity::Error => ERROR_DURATION,
@@ -493,13 +513,42 @@ impl Toast {
 // ToastStack
 // ========================================================================
 
+impl ToastDurations {
+    /// How long a toast of `severity` is shown.
+    pub fn of(self, severity: Severity) -> Duration {
+        match severity {
+            Severity::Error => self.error,
+            Severity::Info => self.info,
+            Severity::Refusal => self.refusal,
+            Severity::Warning => self.warning,
+        }
+    }
+}
+
+impl Default for ToastDurations {
+    fn default() -> Self {
+        Self {
+            error: Severity::Error.duration(),
+            info: Severity::Info.duration(),
+            refusal: Severity::Refusal.duration(),
+            warning: Severity::Warning.duration(),
+        }
+    }
+}
+
 impl ToastStack {
+    /// Shows a toast of each severity for as long as `durations` says,
+    /// from the next toast on.
+    pub fn set_durations(&mut self, durations: ToastDurations) {
+        self.durations = durations;
+    }
+
     /// Show `notice` from `now`. A repeat of the newest toast refreshes it
     /// in place rather than stacking a copy. Past [`TOAST_LIMIT`] the oldest
     /// confirmation or refusal goes first, then the oldest of the rest, so a
     /// burst of either never pushes a problem off screen.
     fn show(&mut self, notice: &Notice, now: Instant) {
-        let expires = now + notice.severity.duration();
+        let expires = now + self.durations.of(notice.severity);
         if let Some(newest) = self.toasts.first_mut()
             && notice.repeats(newest.severity, &newest.source, &newest.text)
         {
@@ -556,8 +605,9 @@ impl ToastStack {
         if self.held == id {
             return false;
         }
+        let durations = self.durations;
         if let Some(released) = self.held.and_then(|held| self.find_mut(held)) {
-            released.expires = now + released.severity.duration();
+            released.expires = now + durations.of(released.severity);
         }
         self.held = id;
         true
@@ -656,6 +706,12 @@ impl Notifier {
     /// What is on screen now, to hold or dismiss a toast.
     pub fn toasts_mut(&mut self) -> &mut ToastStack {
         &mut self.toasts
+    }
+
+    /// Shows a toast of each severity for as long as `durations` says,
+    /// from the next notice on.
+    pub fn set_toast_durations(&mut self, durations: ToastDurations) {
+        self.toasts.set_durations(durations);
     }
 
     /// Shows each toast where `routing` says from now on.
@@ -986,6 +1042,19 @@ mod tests {
             .map(|toast| toast.text.as_str())
             .collect();
         assert_eq!(shown, ["d", "c", "push failed"]);
+    }
+
+    #[test]
+    fn test_an_apps_own_durations_time_its_toasts() {
+        let mut notifier = Notifier::default();
+        let durations = ToastDurations {
+            info: Duration::from_secs(1),
+            ..ToastDurations::default()
+        };
+        notifier.set_toast_durations(durations);
+        let now = Instant::now();
+        post(&mut notifier, Notice::info("copied"), now);
+        assert_eq!(notifier.toasts.next_expiry(), Some(now + Duration::from_secs(1)));
     }
 
     #[test]
