@@ -8,6 +8,7 @@
 //! misty's store, while what it shows comes from the app's state, and what
 //! the user does reaches the app through the callbacks it was given.
 
+use std::borrow::Cow;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -25,7 +26,7 @@ use super::super::base::theme::Theme;
 use super::super::input::event::Input;
 use super::super::render::font::CellMetrics;
 use super::super::render::paragraph::Paragraph;
-use super::super::widgets::button::{self, ButtonProps, ButtonResponse};
+use super::super::widgets::button::{self, ButtonProps, ButtonResponse, ButtonVariant};
 use super::super::widgets::dialog::{self, DialogButton, DialogResponse};
 use super::super::widgets::floating_panel::Corner;
 use super::super::widgets::menu::{self, MenuEntry, MenuResponse};
@@ -78,9 +79,11 @@ pub struct Menu<'a, A, I> {
     /// The menu's items and separators, top to bottom.
     entries: Vec<MenuEntry<I>>,
     /// What the button says.
-    label: &'a str,
+    label: Cow<'a, str>,
     /// What choosing an item runs, with its id.
     on_choose: Option<Callback<A, I>>,
+    /// How the button looks.
+    variant: ButtonVariant,
 }
 
 /// A menu of commands with ids of type `I`, open where the user asked for
@@ -659,6 +662,14 @@ impl<'a, A, I> Menu<'a, A, I> {
             ..self
         }
     }
+
+    /// This menu's button in the look `variant` rather than the default
+    /// filled one, as [`Button::variant`](super::Button::variant) gives a
+    /// button: `ButtonVariant::Ghost` for one that reads as text until the
+    /// pointer is over it, as a place in a path does.
+    pub fn variant(self, variant: ButtonVariant) -> Self {
+        Self { variant, ..self }
+    }
 }
 
 impl<A: 'static, I: Copy + PartialEq + 'static> Spec<A> for Menu<'_, A, I> {
@@ -669,7 +680,7 @@ impl<A: 'static, I: Copy + PartialEq + 'static> Spec<A> for Menu<'_, A, I> {
     fn create(&self) -> MenuButton<I> {
         MenuButton {
             anchor: Rect::default(),
-            button: button::Button::new(self.label),
+            button: button::Button::new(self.label.as_ref()),
             menu: menu::Menu::new(Vec::new()),
         }
     }
@@ -679,7 +690,7 @@ impl<A: 'static, I: Copy + PartialEq + 'static> Spec<A> for Menu<'_, A, I> {
             button: ButtonProps {
                 active: None,
                 enabled: self.enabled && self.on_choose.is_some(),
-                label: self.label,
+                label: &self.label,
             },
             entries: &self.entries,
         }
@@ -698,6 +709,7 @@ impl<A: 'static, I: Copy + PartialEq + 'static> Spec<A> for Menu<'_, A, I> {
         rect: Rect,
         theme: &Theme,
     ) -> Drawn {
+        widget.button.show_variant(self.variant);
         let layer = widget.draw(frame, rect, theme);
         Drawn {
             hit: widget.anchor,
@@ -1450,12 +1462,16 @@ pub fn dialog<'a, A>(title: &'a str, body: Vec<Paragraph>) -> Dialog<'a, A> {
 /// a click chooses an item, running [`Menu::on_choose`] with its id, and
 /// Esc or a click outside closes it; the focus then goes back to the
 /// button.
-pub fn menu<'a, A, I: Copy>(label: &'a str, entries: Vec<MenuEntry<I>>) -> Menu<'a, A, I> {
+pub fn menu<'a, A, I: Copy>(
+    label: impl Into<Cow<'a, str>>,
+    entries: Vec<MenuEntry<I>>,
+) -> Menu<'a, A, I> {
     Menu {
         enabled: true,
         entries,
-        label,
+        label: label.into(),
         on_choose: None,
+        variant: ButtonVariant::Default,
     }
 }
 

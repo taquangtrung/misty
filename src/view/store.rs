@@ -3013,6 +3013,7 @@ mod tests {
     use crate::view::element::{column, field, form, overlay, row, text};
     use crate::view::popups::{ToastCards, context_menu, dialog, menu, toasts, which_key};
     use crate::view::props::PointerDrag;
+    use crate::widgets::button::ButtonVariant;
     use crate::widgets::list_view::ListSource;
     use crate::widgets::menu::{MenuEntry, MenuItem};
     use crate::widgets::number_range::NumberRange;
@@ -3942,6 +3943,25 @@ mod tests {
         assert!(!window.ui_text().contains("Menu"), "{}", window.ui_text());
         assert_eq!(window.app().chosen, None);
         assert!(window.store().traps.is_empty());
+    }
+
+    /// A flat menu button saying a name built at run time.
+    fn place_menu(_probe: &Probe) -> Element<'_, Probe> {
+        let entries = vec![MenuEntry::from(MenuItem::new(3, "Ports"))];
+        menu(format!("System {}", 1), entries)
+            .variant(ButtonVariant::Ghost)
+            .on_choose(|probe: &mut Probe, id| probe.chosen = Some(id))
+            .into()
+    }
+
+    #[test]
+    fn test_a_flat_menu_named_at_run_time_opens_and_chooses_as_any() {
+        let mut window = window(200, place_menu);
+        let place = window.find(Role::Button, "System 1");
+        window.act(AccessAction::Click(place));
+        let ports = window.find(Role::MenuItem, "Ports");
+        window.act(AccessAction::Click(ports));
+        assert_eq!(window.app().chosen, Some(3));
     }
 
     #[test]
