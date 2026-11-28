@@ -15,8 +15,11 @@
 
 use std::time::Instant;
 
-use misty::{AppContext, Application, Error, Frame, Input, Key, KeyCode, Mods, Rect, Rgba, Theme, ThemeToken, Widget, WindowId, WindowOptions};
 use misty::widgets::{CodeView, GutterMark, HexView};
+use misty::{
+    AppContext, Application, Error, Frame, Input, Key, KeyCode, Mods, Rect, Rgba, Theme,
+    ThemeToken, Widget, WindowId, WindowOptions,
+};
 
 // ========================================================================
 // Constants

@@ -22,8 +22,11 @@ use misty::layout::Align;
 use misty::view::{
     Corners, Extent, PointerDrag, Space, button, canvas, column, custom, row, text, text_field,
 };
-use misty::{App, AppCx, Element, Frame, Key, KeyCode, Mods, Point, Rect, Theme, ThemeToken, WindowId, WindowOptions};
 use misty::widgets::{CodeView, CodeViewResponse, FileDropped};
+use misty::{
+    App, AppCx, Element, Frame, Key, KeyCode, Mods, Point, Rect, Theme, ThemeToken, WindowId,
+    WindowOptions,
+};
 
 // ========================================================================
 // Constants

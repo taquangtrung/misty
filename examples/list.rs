@@ -23,8 +23,10 @@ use std::collections::BTreeSet;
 use std::env;
 
 use misty::view::{column, list, text};
-use misty::{App, AppCx, Element, Key, KeyCode, KeyScheme, Mods, Theme, WindowId, WindowOptions, key_label};
 use misty::widgets::{ListKeys, ListSource, RowDrop};
+use misty::{
+    App, AppCx, Element, Key, KeyCode, KeyScheme, Mods, Theme, WindowId, WindowOptions, key_label,
+};
 
 // ========================================================================
 // Constants

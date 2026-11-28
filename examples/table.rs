@@ -31,8 +31,13 @@ use std::cmp::Ordering;
 use std::collections::BTreeSet;
 
 use misty::view::{column, table, text};
-use misty::{App, AppCx, Element, Key, KeyCode, KeyScheme, Mods, TextAlign, Theme, ThemeToken, WindowId, WindowOptions, key_label};
-use misty::widgets::{HeaderMenu, ListKeys, RowDrop, SortDirection, SortKey, TableColumn, TableSource};
+use misty::widgets::{
+    HeaderMenu, ListKeys, RowDrop, SortDirection, SortKey, TableColumn, TableSource,
+};
+use misty::{
+    App, AppCx, Element, Key, KeyCode, KeyScheme, Mods, TextAlign, Theme, ThemeToken, WindowId,
+    WindowOptions, key_label,
+};
 
 // ========================================================================
 // Constants

@@ -7,9 +7,12 @@
 //! cargo run -p misty --example panes
 //! ```
 
-use misty::{AppContext, Application, Axis, Direction, Error, Frame, Input, Key, KeyCode, Mods, Point, SplitTree, Theme, Widget, WindowId, WindowOptions};
 use misty::grid::{Cell, CellBuffer, CellStyle};
 use misty::widgets::{SplitView, SplitViewResponse};
+use misty::{
+    AppContext, Application, Axis, Direction, Error, Frame, Input, Key, KeyCode, Mods, Point,
+    SplitTree, Theme, Widget, WindowId, WindowOptions,
+};
 
 // ========================================================================
 // Constants

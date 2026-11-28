@@ -14,8 +14,11 @@ use std::env;
 use std::fs;
 use std::path::Path;
 
-use misty::{AppContext, Application, Error, Frame, IconSet, Image, Input, KeyCode, Point, Rect, StyledText, Svg, Theme, ThemeToken, WindowId, WindowOptions};
 use misty::widgets::{FileDrop, FileDropEvent, draw_drop_target};
+use misty::{
+    AppContext, Application, Error, Frame, IconSet, Image, Input, KeyCode, Point, Rect, StyledText,
+    Svg, Theme, ThemeToken, WindowId, WindowOptions,
+};
 
 // ========================================================================
 // Constants

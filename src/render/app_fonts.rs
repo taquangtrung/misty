@@ -288,11 +288,17 @@ mod tests {
         set_ui_family(Some(&desktop));
         let named = sync(&mut font_system, synced);
         assert_ne!(named, synced, "what was shaped before no longer matches");
-        let sans = font_system.db().family_name(&glyphon::fontdb::Family::SansSerif);
+        let sans = font_system
+            .db()
+            .family_name(&glyphon::fontdb::Family::SansSerif);
         assert_eq!(sans, desktop);
         assert_eq!(sync(&mut font_system, named), named, "taken once");
         set_ui_family(None);
-        assert_ne!(sync(&mut font_system, named), named, "and back to the desktop's");
+        assert_ne!(
+            sync(&mut font_system, named),
+            named,
+            "and back to the desktop's"
+        );
     }
 
     #[test]

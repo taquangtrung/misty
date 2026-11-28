@@ -13,9 +13,14 @@ use std::env;
 use std::thread;
 use std::time::Duration;
 
+use misty::grid::{
+    ANSI_COLORS, Attributes, Cell, CellBuffer, CellColor, CellStyle, CellWidth, Cursor,
+    CursorShape, UnderlineStyle,
+};
 use misty::view::{cells, column};
-use misty::{App, AppCx, Element, Key, KeyCode, Mods, Theme, Update, Waker, WindowId, WindowOptions};
-use misty::grid::{ANSI_COLORS, Attributes, Cell, CellBuffer, CellColor, CellStyle, CellWidth, Cursor, CursorShape, UnderlineStyle};
+use misty::{
+    App, AppCx, Element, Key, KeyCode, Mods, Theme, Update, Waker, WindowId, WindowOptions,
+};
 
 // ========================================================================
 // Constants

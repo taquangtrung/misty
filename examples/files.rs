@@ -30,8 +30,15 @@ use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use misty::{AppContext, Application, Control, FileOperation, Frame, IconSet, Input, Key, KeyCode, Mods, Outcome, Point, Rect, Span, StyledText, Svg, TextColor, Theme, ThemeToken, Widget, WindowId, WindowOptions, fuzzy_highlight, fuzzy_score};
-use misty::widgets::{Badge, Hints, HintsResponse, List, ListResponse, ListSource, RowContent, RowIcon, TextField, TextFieldResponse};
+use misty::widgets::{
+    Badge, Hints, HintsResponse, List, ListResponse, ListSource, RowContent, RowIcon, TextField,
+    TextFieldResponse,
+};
+use misty::{
+    AppContext, Application, Control, FileOperation, Frame, IconSet, Input, Key, KeyCode, Mods,
+    Outcome, Point, Rect, Span, StyledText, Svg, TextColor, Theme, ThemeToken, Widget, WindowId,
+    WindowOptions, fuzzy_highlight, fuzzy_score,
+};
 
 // ========================================================================
 // Constants

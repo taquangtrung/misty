@@ -10,9 +10,12 @@
 
 use std::time::Instant;
 
-use misty::{AppContext, Application, Error, Frame, Input, KeyCode, Notice, Notifier, Point, PointerButton, Rect, Routing, Severity, Theme, Widget, WindowId, WindowOptions};
 use misty::grid::{Cell, CellBuffer, CellStyle};
 use misty::widgets::{Toasts, Tooltip};
+use misty::{
+    AppContext, Application, Error, Frame, Input, KeyCode, Notice, Notifier, Point, PointerButton,
+    Rect, Routing, Severity, Theme, Widget, WindowId, WindowOptions,
+};
 
 // ========================================================================
 // Constants

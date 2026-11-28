@@ -1054,7 +1054,10 @@ mod tests {
         notifier.set_toast_durations(durations);
         let now = Instant::now();
         post(&mut notifier, Notice::info("copied"), now);
-        assert_eq!(notifier.toasts.next_expiry(), Some(now + Duration::from_secs(1)));
+        assert_eq!(
+            notifier.toasts.next_expiry(),
+            Some(now + Duration::from_secs(1))
+        );
     }
 
     #[test]

@@ -20,8 +20,12 @@
 use std::time::Instant;
 
 use misty::accesskit::{Node, Role};
-use misty::{AccessAction, AppContext, Application, Control, Error, FocusId, FocusTree, Frame, ImeFocus, Input, Key, KeyCode, Mods, Outcome, Point, Rect, Route, Size, Span, StyledText, Theme, ThemeToken, Widget, WindowId, WindowOptions};
 use misty::widgets::TextField;
+use misty::{
+    AccessAction, AppContext, Application, Control, Error, FocusId, FocusTree, Frame, ImeFocus,
+    Input, Key, KeyCode, Mods, Outcome, Point, Rect, Route, Size, Span, StyledText, Theme,
+    ThemeToken, Widget, WindowId, WindowOptions,
+};
 
 // ========================================================================
 // Constants
