@@ -1,7 +1,7 @@
 //! The parts a page of an app is built from, as a settings page, a list of
-//! extensions, a keybinding table, or a dashboard is: a [`page`] with its
-//! heading, scope tabs, actions, sidebar, content, and a footer of details
-//! on what is selected, the [`sidebar`] choosing what it shows, [`section`]s grouping
+//! extensions, a keybinding table, or a dashboard is: a [`page`] with a
+//! header the app builds, its heading, scope tabs, actions, sidebar,
+//! content, and a footer of details on what is selected, the [`sidebar`] choosing what it shows, [`section`]s grouping
 //! [`item`]s in cards, and the [`badge`]s, [`keycap`]s, and [`divider`]s
 //! inside them. Words are set in the proportional (UI) font, a key cap's
 //! key on the cell grid; a badge and a key cap are as wide as what they
@@ -147,11 +147,16 @@ pub struct FilledPage<'a, A> {
 struct PageParts<'a, A> {
     /// The elements at the heading's right, after the scope tabs.
     actions: Vec<Element<'a, A>>,
+    /// The room above and below the header and the footer, where the app
+    /// set it ([`Page::band_padding`]); else the rows misty leaves.
+    band_padding: Option<Space>,
     /// The room above and below the content, where the app set it
     /// ([`Page::content_padding`]); else the rows the kind of page has.
     content_padding: Option<Space>,
     /// The details of what is selected, under the content, if any.
     footer: Option<Element<'a, A>>,
+    /// What the app puts across the page's top, over the heading, if any.
+    header: Option<Element<'a, A>>,
     /// The scope tabs at the heading's right, if any.
     scopes: Option<Element<'a, A>>,
     /// What chooses what the content shows, at the page's left, if any.
@@ -246,6 +251,25 @@ impl<'a, A: 'static> Page<'a, A> {
         self
     }
 
+    /// This page with `down` above and below its header and its footer, in
+    /// place of the rows misty leaves: for an app that sizes those bands
+    /// itself, as `Space::Cells(0.0)` leaves a header as tall as what it
+    /// holds.
+    pub fn band_padding(mut self, down: Space) -> Self {
+        self.parts.band_padding = Some(down);
+        self
+    }
+
+    /// This page with `header` across its top, over its heading and a
+    /// line, as the footer is across its foot: whatever the app builds
+    /// there, as tall as it is. A header saying where the page is, or
+    /// summing up what it shows (a count, a sort, a filter), rather than
+    /// a [`page`]'s title, which names it.
+    pub fn header(mut self, header: impl Into<Element<'a, A>>) -> Self {
+        self.parts.header = Some(header.into());
+        self
+    }
+
     /// This page with `element` at its heading's right: a button, a menu.
     pub fn action(mut self, element: impl Into<Element<'a, A>>) -> Self {
         self.parts.actions.push(element.into());
@@ -328,14 +352,21 @@ impl<'a, A: 'static> PageParts<'a, A> {
         padded(content, self.side_padding, down)
     }
 
-    /// A band of the page, its heading or its footer, with the page's room
-    /// at its sides.
+    /// A band of the page, its heading, with the page's room at its sides.
     fn pad_band(&self, band: Element<'a, A>) -> Element<'a, A> {
         padded(band, self.side_padding, Space::Cells(BAND_PADDING_ROWS))
     }
 
-    /// The page laid out around `content`: the heading over a line, then
-    /// the sidebar beside the content, then the footer under a line.
+    /// The header or the footer, with the page's room at its sides and the
+    /// app's above and below, if it set it.
+    fn pad_app_band(&self, band: Element<'a, A>) -> Element<'a, A> {
+        let down = self.band_padding.unwrap_or(Space::Cells(BAND_PADDING_ROWS));
+        padded(column([band]), self.side_padding, down)
+    }
+
+    /// The page laid out around `content`: the header over a line, the
+    /// heading over a line, then the sidebar beside the content, then the
+    /// footer under a line.
     fn around(mut self, content: Element<'a, A>) -> Element<'a, A> {
         let has_heading = self.title.is_some() || self.scopes.is_some() || !self.actions.is_empty();
         let mut heading: Vec<Element<'a, A>> = self
@@ -363,13 +394,19 @@ impl<'a, A: 'static> PageParts<'a, A> {
         .gap(Space::Cells(0.0))
         .align(Align::Stretch)
         .grow(1.0);
-        let mut parts = match has_heading {
-            true => vec![heading, divider(), body],
-            false => vec![body],
-        };
+        let mut parts = Vec::new();
+        if let Some(header) = self.header.take() {
+            parts.push(self.pad_app_band(header));
+            parts.push(divider());
+        }
+        if has_heading {
+            parts.push(heading);
+            parts.push(divider());
+        }
+        parts.push(body);
         if let Some(footer) = self.footer.take() {
             parts.push(divider());
-            parts.push(self.pad_band(column([footer])));
+            parts.push(self.pad_app_band(footer));
         }
         column(parts).gap(Space::Cells(0.0)).grow(1.0)
     }
@@ -742,15 +779,18 @@ fn padded<A>(element: Element<'_, A>, across: Option<Space>, down: Space) -> Ele
     }
 }
 
-/// A page headed `title`, with nothing in it yet: give it a sidebar, scope
-/// tabs, and actions as it has them, then its content as a scrolling or a
-/// filled page ([`Page::scrolling`], [`Page::filled`]), and a footer.
+/// A page headed `title`, with nothing in it yet: give it a header, a
+/// sidebar, scope tabs, and actions as it has them, then its content as a
+/// scrolling or a filled page ([`Page::scrolling`], [`Page::filled`]), and
+/// a footer.
 pub fn page<'a, A: 'static>(title: impl Into<Cow<'a, str>>) -> Page<'a, A> {
     Page {
         parts: PageParts {
             actions: Vec::new(),
+            band_padding: None,
             content_padding: None,
             footer: None,
+            header: None,
             scopes: None,
             sidebar: None,
             side_padding: None,
@@ -766,8 +806,10 @@ pub fn untitled_page<'a, A: 'static>() -> Page<'a, A> {
     Page {
         parts: PageParts {
             actions: Vec::new(),
+            band_padding: None,
             content_padding: None,
             footer: None,
+            header: None,
             scopes: None,
             sidebar: None,
             side_padding: None,
@@ -1193,6 +1235,63 @@ mod tests {
         }
         .button_corner();
         assert!(top < titled_top, "{top} against {titled_top}");
+    }
+
+    /// A titled page with a button in its header, its bands padded as it
+    /// asks.
+    struct Headed {
+        band_padding: Option<Space>,
+        theme: Theme,
+    }
+
+    impl App for Headed {
+        fn view(&self, _window: WindowId) -> Element<'_, Self> {
+            let mut shown = page("Headed").header(button("Go"));
+            if let Some(down) = self.band_padding {
+                shown = shown.band_padding(down);
+            }
+            shown
+                .filled(column([text("Body").into()]))
+                .footer(text("Details"))
+                .into()
+        }
+
+        fn theme(&self) -> &Theme {
+            &self.theme
+        }
+    }
+
+    /// Where the header's button starts, from the window's top, at scale 1.
+    fn header_top(band_padding: Option<Space>) -> f32 {
+        let headed = Headed {
+            band_padding,
+            theme: Theme::dark(),
+        };
+        let window = TreeWindow::new(headed, "headed", 600, 400);
+        let tree = crate::testing::access_tree(window.frame(), "headed");
+        let (_, node) = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| node.role() == Role::Button)
+            .unwrap();
+        node.bounds().unwrap().y0 as f32
+    }
+
+    #[test]
+    fn test_a_header_goes_over_the_heading_and_its_padding_is_the_apps() {
+        let headed = Headed {
+            band_padding: None,
+            theme: Theme::dark(),
+        };
+        let window = TreeWindow::new(headed, "headed", 600, 400);
+        let drawn = window.drawn_text();
+        let at = |words: &str| drawn.iter().position(|line| line == words);
+        assert!(at("Go") < at("Headed"), "over the heading: {drawn:?}");
+        assert!(at("Body") < at("Details"), "the footer at the foot");
+        assert!(
+            header_top(Some(Space::Cells(0.0))) < header_top(None),
+            "none above it"
+        );
     }
 
     #[test]
