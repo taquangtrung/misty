@@ -22,6 +22,10 @@ const DEFAULT_LIMIT: Duration = Duration::from_secs(5);
 // Data Structures
 // ========================================================================
 
+/// What a [`HangWatch`] calls with each [`HangReport`], on the watchdog
+/// thread.
+type OnHang = Arc<dyn Fn(&HangReport) + Send + Sync>;
+
 /// What an app does about a callback that does not return: how long one
 /// may run, and what is called, on the watchdog thread, once it has run
 /// longer and again each limit after while it stays stuck. The default
@@ -32,7 +36,7 @@ pub struct HangWatch {
     /// How long a callback may run.
     pub(crate) limit: Duration,
     /// What is told of a hang, or `None` to watch nothing.
-    pub(crate) on_hang: Option<Arc<dyn Fn(&HangReport) + Send + Sync>>,
+    pub(crate) on_hang: Option<OnHang>,
 }
 
 /// A callback on the main thread that has run past its [`HangWatch`]'s
